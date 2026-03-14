@@ -1,0 +1,51 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Global page styling */
+
+body {
+  margin: 0;
+  font-family: Arial, Helvetica, sans-serif;
+  background: #f3f4f6;
+}
+
+/* Inputs */
+
+input {
+  border: 1px solid #ddd;
+  padding: 8px;
+  margin-bottom: 10px;
+  width: 100%;
+  border-radius: 4px;
+}
+
+/* Buttons */
+
+button {
+  padding: 10px 16px;
+  border-radius: 6px;
+  border: none;
+  margin-right: 10px;
+  margin-top: 10px;
+  cursor: pointer;
+}
+
+/* Invoice layout */
+
+.invoice-container {
+  background: white;
+  padding: 40px;
+  width: 800px;
+  margin: auto;
+}
+
+/* Table */
+
+table {
+  border-collapse: collapse;
+}
+
+th, td {
+  padding: 10px;
+}
