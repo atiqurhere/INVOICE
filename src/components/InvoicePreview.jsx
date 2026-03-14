@@ -1,14 +1,19 @@
-import React, {forwardRef} from "react"
+import React, { forwardRef } from "react"
+import InvoiceTable from "./InvoiceTable"
 
-const InvoicePreview = forwardRef(({invoice},ref)=>{
+const InvoicePreview = forwardRef(({ invoice }, ref) => {
 
-const subtotal = invoice.items?.reduce((sum,i)=>sum + i.qty*i.price,0) || 0
+const subtotal = invoice.items?.reduce(
+  (sum, item) => sum + item.qty * item.price,
+  0
+) || 0
+
 const vat = subtotal * 0.2
 const total = subtotal + vat
 
-return(
+return (
 
-<div ref={ref} className="bg-white p-10 w-[800px] mx-auto">
+<div ref={ref} className="bg-white p-10 w-[800px] mx-auto shadow">
 
 <div className="border-t-4 border-teal-700 mb-6"></div>
 
@@ -16,9 +21,11 @@ return(
 
 <div>
 
-<h1 className="text-2xl font-bold">PRINT YOUR VIBE</h1>
+<h1 className="text-2xl font-bold text-teal-800">
+PRINT YOUR VIBE
+</h1>
 
-<h3 className="mt-4 font-bold">Bill To</h3>
+<h3 className="mt-6 font-bold">Bill To</h3>
 
 <p>{invoice.customer}</p>
 <p>{invoice.phone}</p>
@@ -26,58 +33,27 @@ return(
 
 </div>
 
-<div className="bg-teal-700 text-white p-4">
+<div className="bg-teal-700 text-white p-5 rounded">
 
-<h3>Invoice {invoice.invoice_no}</h3>
+<h3 className="text-lg font-semibold">
+Invoice #{invoice.invoice_no}
+</h3>
 
 </div>
 
 </div>
 
-<table className="w-full mt-6">
-
-<thead className="bg-teal-700 text-white">
-
-<tr>
-<th>Product</th>
-<th>Qty</th>
-<th>Price</th>
-<th>Amount</th>
-</tr>
-
-</thead>
-
-<tbody>
-
-{invoice.items?.map((item,i)=>{
-
-const amount=item.qty*item.price
-
-return(
-
-<tr key={i}>
-
-<td>{item.product}</td>
-<td>{item.qty}</td>
-<td>£{item.price}</td>
-<td>£{amount}</td>
-
-</tr>
-
-)
-
-})}
-
-</tbody>
-
-</table>
+<InvoiceTable items={invoice.items} />
 
 <div className="text-right mt-6">
 
-<p>Subtotal £{subtotal}</p>
-<p>VAT £{vat}</p>
+<p>Subtotal £{subtotal.toFixed(2)}</p>
 
-<h2 className="text-red-600 font-bold">Total £{total}</h2>
+<p>VAT £{vat.toFixed(2)}</p>
+
+<h2 className="text-red-600 font-bold text-xl">
+Total £{total.toFixed(2)}
+</h2>
 
 </div>
 
