@@ -1,1 +1,42 @@
+import { useEffect,useState } from "react"
+import { supabase } from "../lib/supabase"
 
+export default function RecentInvoices(){
+
+const [list,setList] = useState([])
+
+useEffect(()=>{
+
+load()
+
+},[])
+
+const load = async ()=>{
+
+const {data} = await supabase
+.from("invoices")
+.select("*")
+.order("created_at",{ascending:false})
+
+setList(data)
+
+}
+
+return(
+
+<div>
+
+<h2 className="text-xl font-bold">Recent Invoices</h2>
+
+{list.map(i=>(
+<div key={i.id}>
+
+{i.invoice_no} — {i.customer} — £{i.total}
+
+</div>
+))}
+
+</div>
+
+)
+}
