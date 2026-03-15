@@ -81,8 +81,8 @@ export default function InvoiceEditor({ logoSrc, onLogoChange, data, setData }) 
 			<section className="editor-section">
 				<h3 className="section-title">Invoice Details</h3>
 				<Field label="Invoice Number" value={invoice.number} onChange={(v) => setInvoice({ number: v })} />
-				<Field label="Issue Date" value={invoice.issued} onChange={(v) => setInvoice({ issued: v })} />
-				<Field label="Delivery Date" value={invoice.delivery} onChange={(v) => setInvoice({ delivery: v })} />
+				<Field label="Issue Date" type="date" value={invoice.issued} onChange={(v) => setInvoice({ issued: v })} />
+				<Field label="Delivery Date" type="date" value={invoice.delivery} onChange={(v) => setInvoice({ delivery: v })} />
 			</section>
 
 			<section className="editor-section">

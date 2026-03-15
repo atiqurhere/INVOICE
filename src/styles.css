@@ -387,14 +387,21 @@ textarea.field-input {
 .invoice-two-col,
 .invoice-payment-row {
   display: flex;
-  gap: 32px;
+  justify-content: space-between;
   margin-bottom: 20px;
 }
 
-.invoice-two-col section,
-.invoice-payment-row section,
-.invoice-payment-row>div {
+.invoice-two-col section:first-child,
+.invoice-payment-row section:first-child,
+.invoice-payment-row > div:first-child {
   flex: 1;
+  padding-right: 32px;
+}
+
+.invoice-two-col section:last-child,
+.invoice-payment-row section:last-child {
+  width: 280px;
+  flex-shrink: 0;
 }
 
 .invoice-two-col h4,

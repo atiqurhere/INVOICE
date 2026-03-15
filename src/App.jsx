@@ -21,8 +21,8 @@ const DEFAULT_INVOICE = {
 	},
 	invoice: {
 		number: "",
-		issued: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
-		delivery: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' }).replace(/\//g, '-'),
+		issued: new Date().toISOString().split('T')[0],
+		delivery: new Date().toISOString().split('T')[0],
 	},
 	billTo: { name: "", phone: "", email: "" },
 	payment: { accountName: "", accountNumber: "", sortCode: "" },

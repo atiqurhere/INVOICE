@@ -3,7 +3,7 @@ import jsPDF from "jspdf"
 
 export const downloadPDF = async (ref)=>{
 
-const canvas = await html2canvas(ref)
+const canvas = await html2canvas(ref, { useCORS: true, allowTaint: true })
 
 const img = canvas.toDataURL("image/png")
 
@@ -17,7 +17,7 @@ pdf.save("invoice.pdf")
 
 export const downloadJPG = async (ref)=>{
 
-const canvas = await html2canvas(ref)
+const canvas = await html2canvas(ref, { useCORS: true, allowTaint: true })
 
 const link = document.createElement("a")
 

@@ -7,6 +7,13 @@ const fmt = (n) => {
   return `£${fixed.endsWith(".00") ? String(value) : fixed}`
 }
 
+const formatDateStr = (dStr) => {
+  if (!dStr) return ""
+  const parts = dStr.split('-')
+  if (parts.length === 3) return `${parts[2]}-${parts[1]}-${parts[0]}`
+  return dStr
+}
+
 const InvoicePreview = forwardRef(({ invoiceData, logoSrc }, ref) => {
   const { company, invoice, billTo, payment, items, terms, thankYou, totals } = invoiceData
 
@@ -39,8 +46,8 @@ const InvoicePreview = forwardRef(({ invoiceData, logoSrc }, ref) => {
             Invoice #{invoice.number}
           </div>
           <div className="invoice-dates-box">
-            <div className="date-row"><span>Issued</span><span>{invoice.issued}</span></div>
-            <div className="date-row alt-row"><span>Delivery</span><span>{invoice.delivery}</span></div>
+            <div className="date-row"><span>Issued</span><span>{formatDateStr(invoice.issued)}</span></div>
+            <div className="date-row alt-row"><span>Delivery</span><span>{formatDateStr(invoice.delivery)}</span></div>
             <div className="date-row"><span>Due</span><span>{fmt(total)}</span></div>
           </div>
           <div className="invoice-total-box">
