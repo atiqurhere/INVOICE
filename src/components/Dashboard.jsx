@@ -41,7 +41,7 @@ export default function Dashboard({ session, onEdit }) {
 			fetchCompanyConfig()
 			fetchInvoices()
 		}
-	}, [session])
+	}, [session?.user?.id])
 
 	const fetchCompanyConfig = async () => {
 		const { data, error } = await supabase
