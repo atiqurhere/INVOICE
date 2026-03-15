@@ -354,8 +354,8 @@ export default function App() {
 										</button>
 										{isExportOpen && (
 											<div className="export-dropdown-menu">
-												<button disabled={isActionDisabled} onClick={() => { downloadPDF(ref.current); setIsExportOpen(false) }}>Download PDF</button>
-												<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current); setIsExportOpen(false) }}>Download JPG</button>
+												<button disabled={isActionDisabled} onClick={() => { downloadPDF(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download PDF</button>
+												<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download JPG</button>
 												<button disabled={isActionDisabled} onClick={() => { printInvoice(ref.current); setIsExportOpen(false) }}>Print</button>
 											</div>
 										)}
@@ -414,8 +414,8 @@ export default function App() {
 										</button>
 										{isExportOpen && (
 											<div className="export-dropdown-menu" style={{ bottom: '100%', top: 'auto', marginBottom: '8px', minWidth: '200px' }}>
-												<button disabled={isActionDisabled} onClick={() => { downloadPDF(ref.current); setIsExportOpen(false) }}>Download PDF</button>
-												<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current); setIsExportOpen(false) }}>Download JPG</button>
+												<button disabled={isActionDisabled} onClick={() => { downloadPDF(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download PDF</button>
+												<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download JPG</button>
 												<button disabled={isActionDisabled} onClick={() => { printInvoice(ref.current); setIsExportOpen(false) }}>Print</button>
 											</div>
 										)}

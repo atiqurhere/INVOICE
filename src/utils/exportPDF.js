@@ -12,18 +12,18 @@ const CANVAS_OPTIONS = {
   }
 }
 
-export const downloadPDF = async (ref) => {
+export const downloadPDF = async (ref, filename = "invoice") => {
   const canvas = await html2canvas(ref, CANVAS_OPTIONS)
   const img = canvas.toDataURL("image/png")
   const pdf = new jsPDF()
   pdf.addImage(img, "PNG", 0, 0, 210, 297)
-  pdf.save("invoice.pdf")
+  pdf.save(`${filename}.pdf`)
 }
 
-export const downloadJPG = async (ref) => {
+export const downloadJPG = async (ref, filename = "invoice") => {
   const canvas = await html2canvas(ref, CANVAS_OPTIONS)
   const link = document.createElement("a")
-  link.download = "invoice.jpg"
+  link.download = `${filename}.jpg`
   link.href = canvas.toDataURL()
   link.click()
 }

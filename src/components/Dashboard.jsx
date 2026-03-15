@@ -380,8 +380,8 @@ export default function Dashboard({ session, onEdit }) {
 									</button>
 									{isExportOpen && (
 										<div className="export-dropdown-menu">
-											<button onClick={() => { downloadPDF(modalRef.current); setIsExportOpen(false) }}>Download PDF</button>
-											<button onClick={() => { downloadJPG(modalRef.current); setIsExportOpen(false) }}>Download JPG</button>
+											<button onClick={() => { downloadPDF(modalRef.current, viewingInvoice.invoice_no); setIsExportOpen(false) }}>Download PDF</button>
+											<button onClick={() => { downloadJPG(modalRef.current, viewingInvoice.invoice_no); setIsExportOpen(false) }}>Download JPG</button>
 											<button onClick={() => { printInvoice(modalRef.current); setIsExportOpen(false) }}>Print</button>
 										</div>
 									)}
