@@ -159,6 +159,24 @@ export default function App() {
 
 	const handleSave = async (status = "saved") => {
 		if (!supabase || !session) return
+
+		// Validation when saving as final invoice
+		if (status === "saved") {
+			if (!invoiceData.invoice.number.trim()) {
+				alert("Invoice number is required to save.")
+				return
+			}
+			if (!invoiceData.billTo.name.trim()) {
+				alert("Bill To Name is required to save the invoice. You can save as Draft if you need to finish later.")
+				return
+			}
+			const hasValidItem = invoiceData.items.some(item => item.description.trim() !== "")
+			if (!hasValidItem) {
+				alert("At least one item with a description is required to save.")
+				return
+			}
+		}
+
 		setIsSaving(true)
 		
 		const total = invoiceData.items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0), 0)
