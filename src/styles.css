@@ -663,6 +663,12 @@ textarea.field-input {
     left: 0;
   }
 
+  .company-profile-view {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 16px;
+  }
+
   .app-main {
     padding: 10px;
   }
@@ -1017,6 +1023,41 @@ textarea.field-input {
   background: #fecaca;
 }
 
+/* --- Dashboard Company Profile View --- */
+.company-profile-view {
+  display: flex;
+  gap: 24px;
+  align-items: center;
+  background: #f8fafc;
+  padding: 16px;
+  border-radius: 8px;
+  border: 1px solid #e2e8f0;
+}
+
+.company-logo-preview {
+  width: 80px;
+  height: 80px;
+  object-fit: contain;
+  background: #fff;
+  border-radius: 8px;
+  padding: 4px;
+  border: 1px solid #e2e8f0;
+  flex-shrink: 0;
+}
+
+.company-logo-placeholder {
+  width: 80px;
+  height: 80px;
+  background: #fff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  color: #94a3b8;
+  flex-shrink: 0;
+}
 
 .dashboard-settings-card {
   background: #fff;
