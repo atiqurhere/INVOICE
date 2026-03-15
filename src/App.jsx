@@ -7,7 +7,7 @@ import Dashboard from "./components/Dashboard"
 import defaultLogo from "./logo/logo.png"
 
 import { supabase } from "./lib/supabase"
-import { downloadPDF, downloadJPG } from "./utils/exportPDF"
+import { downloadPDF, downloadJPG, printInvoice } from "./utils/exportPDF"
 import { generateInvoiceNumber } from "./utils/invoiceNumber"
 
 const TEAL = "#2a7f8e"
@@ -301,7 +301,7 @@ export default function App() {
 											<div className="export-dropdown-menu">
 												<button disabled={isActionDisabled} onClick={() => { downloadPDF(ref.current); setIsExportOpen(false) }}>Download PDF</button>
 												<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current); setIsExportOpen(false) }}>Download JPG</button>
-												<button onClick={() => { window.print(); setIsExportOpen(false) }}>Print</button>
+												<button disabled={isActionDisabled} onClick={() => { printInvoice(ref.current); setIsExportOpen(false) }}>Print</button>
 											</div>
 										)}
 									</div>
