@@ -200,11 +200,11 @@ export default function Dashboard({ session, onEdit }) {
 				</div>
 
 				{!isEditingCompany ? (
-					<div style={{ display: "flex", gap: "24px", alignItems: "center", background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+					<div className="company-profile-view">
 						{company.logo_url ? (
-							<img src={company.logo_url} alt="Company Logo" style={{ width: 80, height: 80, objectFit: "contain", background: "#fff", borderRadius: 8, padding: 4, border: "1px solid #e2e8f0" }} />
+							<img src={company.logo_url} alt="Company Logo" className="company-logo-preview" />
 						) : (
-							<div style={{ width: 80, height: 80, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#94a3b8" }}>No Logo</div>
+							<div className="company-logo-placeholder">No Logo</div>
 						)}
 						<div>
 							<h4 style={{ margin: "0 0 4px", fontSize: "18px", color: "#0f172a" }}>{company.company_name}</h4>
@@ -303,6 +303,7 @@ export default function Dashboard({ session, onEdit }) {
 
 			<div className="dashboard-table-wrap">
 				<h3>Manage Invoices</h3>
+				<div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
 				<table className="dashboard-table">
 					<thead>
 						<tr>
@@ -351,6 +352,7 @@ export default function Dashboard({ session, onEdit }) {
 						)}
 					</tbody>
 				</table>
+				</div>
 			</div>
 
 			{/* INVOICE VIEWER MODAL */}
