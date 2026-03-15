@@ -1,98 +1,181 @@
-import { useState } from "react"
+import React from "react"
 
-export default function InvoiceEditor({setInvoice}){
+const TEAL = "#2a7f8e"
 
-const [items,setItems] = useState([
-{product:"",qty:1,price:0}
-])
-
-const updateItem=(i,key,val)=>{
-
-const newItems=[...items]
-newItems[i][key]=val
-
-setItems(newItems)
-
-setInvoice(prev=>({...prev,items:newItems}))
+function Field({ label, value, onChange, type = "text", textarea = false }) {
+	return (
+		<div className="field-wrap">
+			<label className="field-label">{label}</label>
+			{textarea ? (
+				<textarea className="field-input" value={value} onChange={(e) => onChange(e.target.value)} rows={2} />
+			) : (
+				<input className="field-input" type={type} value={value} onChange={(e) => onChange(e.target.value)} />
+			)}
+		</div>
+	)
 }
 
-const addRow=()=>{
+export default function InvoiceEditor({ logoSrc, onLogoChange, data, setData }) {
+	const { company, invoice, billTo, payment, items, terms, thankYou } = data
 
-setItems([...items,{product:"",qty:1,price:0}])
+	const setCompany = (patch) => setData((prev) => ({ ...prev, company: { ...prev.company, ...patch } }))
+	const setInvoice = (patch) => setData((prev) => ({ ...prev, invoice: { ...prev.invoice, ...patch } }))
+	const setBillTo = (patch) => setData((prev) => ({ ...prev, billTo: { ...prev.billTo, ...patch } }))
+	const setPayment = (patch) => setData((prev) => ({ ...prev, payment: { ...prev.payment, ...patch } }))
 
-}
+	const updateItem = (index, key, value) => {
+		setData((prev) => {
+			const nextItems = [...prev.items]
+			nextItems[index] = { ...nextItems[index], [key]: value }
+			return { ...prev, items: nextItems }
+		})
+	}
 
-return(
+	const removeItem = (index) => {
+		setData((prev) => ({
+			...prev,
+			items: prev.items.filter((_, i) => i !== index),
+		}))
+	}
 
-<div className="p-4">
+	const addItem = () => {
+		setData((prev) => ({
+			...prev,
+			items: [...prev.items, { description: "", qty: 1, price: 0 }],
+		}))
+	}
 
-<h2 className="text-xl font-bold mb-4">Invoice Details</h2>
+	const updateTerm = (index, value) => {
+		setData((prev) => {
+			const nextTerms = [...prev.terms]
+			nextTerms[index] = value
+			return { ...prev, terms: nextTerms }
+		})
+	}
 
-<input placeholder="Customer Name"
-className="input"
-onChange={e=>setInvoice(p=>({...p,customer:e.target.value}))}
-/>
+	const removeTerm = (index) => {
+		setData((prev) => ({
+			...prev,
+			terms: prev.terms.filter((_, i) => i !== index),
+		}))
+	}
 
-<input placeholder="Phone"
-className="input"
-onChange={e=>setInvoice(p=>({...p,phone:e.target.value}))}
-/>
+	const addTerm = () => {
+		setData((prev) => ({ ...prev, terms: [...prev.terms, ""] }))
+	}
 
-<input placeholder="Email"
-className="input"
-onChange={e=>setInvoice(p=>({...p,email:e.target.value}))}
-/>
+	return (
+		<div>
+			<section className="editor-section">
+				<h3 className="section-title">Company / Service Provider</h3>
+				<div className="logo-row">
+					<img src={logoSrc} alt="Current logo" className="logo-preview" />
+					<input type="file" accept="image/*" onChange={onLogoChange} className="logo-input" />
+				</div>
+				<Field label="Company Name" value={company.name} onChange={(v) => setCompany({ name: v })} />
+				<Field label="Phone" value={company.phone} onChange={(v) => setCompany({ phone: v })} />
+				<Field label="Address" value={company.address} onChange={(v) => setCompany({ address: v })} />
+				<Field label="Email" value={company.email} onChange={(v) => setCompany({ email: v })} />
+			</section>
 
-<table className="table-auto w-full mt-4">
+			<section className="editor-section">
+				<h3 className="section-title">Invoice Details</h3>
+				<Field label="Invoice Number" value={invoice.number} onChange={(v) => setInvoice({ number: v })} />
+				<Field label="Issue Date" value={invoice.issued} onChange={(v) => setInvoice({ issued: v })} />
+				<Field label="Delivery Date" value={invoice.delivery} onChange={(v) => setInvoice({ delivery: v })} />
+			</section>
 
-<thead>
-<tr>
-<th>Product</th>
-<th>Qty</th>
-<th>Price</th>
-</tr>
-</thead>
+			<section className="editor-section">
+				<h3 className="section-title">Bill To</h3>
+				<Field label="Client Name" value={billTo.name} onChange={(v) => setBillTo({ name: v })} />
+				<Field label="Phone" value={billTo.phone} onChange={(v) => setBillTo({ phone: v })} />
+				<Field label="Email" value={billTo.email} onChange={(v) => setBillTo({ email: v })} />
+			</section>
 
-<tbody>
+			<section className="editor-section">
+				<h3 className="section-title">Payment Details</h3>
+				<Field label="Account Name" value={payment.accountName} onChange={(v) => setPayment({ accountName: v })} />
+				<Field label="Account Number" value={payment.accountNumber} onChange={(v) => setPayment({ accountNumber: v })} />
+				<Field label="Sort Code" value={payment.sortCode} onChange={(v) => setPayment({ sortCode: v })} />
+			</section>
 
-{items.map((item,i)=>(
-<tr key={i}>
+			<section className="editor-section">
+				<h3 className="section-title">Line Items</h3>
+				<table className="editor-items-table">
+					<thead>
+						<tr>
+							<th>Description</th>
+							<th>Qty</th>
+							<th>Price (£)</th>
+							<th>Amount</th>
+							<th></th>
+						</tr>
+					</thead>
+					<tbody>
+						{items.map((item, i) => {
+							const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0)
+							return (
+								<tr key={i}>
+									<td>
+										<input
+											className="field-input"
+											value={item.description}
+											onChange={(e) => updateItem(i, "description", e.target.value)}
+										/>
+									</td>
+									<td>
+										<input
+											className="field-input"
+											type="number"
+											value={item.qty}
+											onChange={(e) => updateItem(i, "qty", e.target.value)}
+										/>
+									</td>
+									<td>
+										<input
+											className="field-input"
+											type="number"
+											step="0.01"
+											value={item.price}
+											onChange={(e) => updateItem(i, "price", e.target.value)}
+										/>
+									</td>
+									<td className="amount-cell">£{amount.toFixed(2)}</td>
+									<td>
+										<button type="button" className="danger-btn" onClick={() => removeItem(i)}>
+											Remove
+										</button>
+									</td>
+								</tr>
+							)
+						})}
+					</tbody>
+				</table>
+				<button type="button" className="add-btn" onClick={addItem} style={{ background: TEAL }}>
+					Add Item
+				</button>
+			</section>
 
-<td>
-<input
-value={item.product}
-onChange={e=>updateItem(i,"product",e.target.value)}
-/>
-</td>
+			<section className="editor-section">
+				<h3 className="section-title">Terms &amp; Conditions</h3>
+				{terms.map((term, i) => (
+					<div className="term-row" key={i}>
+						<span className="term-index">{i + 1}.</span>
+						<textarea className="field-input" rows={2} value={term} onChange={(e) => updateTerm(i, e.target.value)} />
+						<button type="button" className="danger-btn" onClick={() => removeTerm(i)}>
+							Remove
+						</button>
+					</div>
+				))}
+				<button type="button" className="add-btn" onClick={addTerm} style={{ background: TEAL }}>
+					Add Term
+				</button>
+			</section>
 
-<td>
-<input
-type="number"
-value={item.qty}
-onChange={e=>updateItem(i,"qty",e.target.value)}
-/>
-</td>
-
-<td>
-<input
-type="number"
-value={item.price}
-onChange={e=>updateItem(i,"price",e.target.value)}
-/>
-</td>
-
-</tr>
-))}
-
-</tbody>
-
-</table>
-
-<button onClick={addRow} className="mt-3 bg-blue-500 text-white px-4 py-2">
-Add Product
-</button>
-
-</div>
-
-)
+			<section className="editor-section">
+				<h3 className="section-title">Footer Message</h3>
+				<Field label="Thank You Message" value={thankYou} onChange={(v) => setData((prev) => ({ ...prev, thankYou: v }))} />
+			</section>
+		</div>
+	)
 }

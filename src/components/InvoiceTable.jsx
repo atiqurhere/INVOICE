@@ -1,64 +1,36 @@
 import React from "react"
 
 export default function InvoiceTable({ items = [] }) {
+  const fmt = (n) => {
+    const value = parseFloat(n || 0)
+    const fixed = value.toFixed(2)
+    return `£${fixed.endsWith(".00") ? String(value) : fixed}`
+  }
 
-const subtotal = items.reduce(
-  (sum, item) => sum + item.qty * item.price,
-  0
-)
+  return (
+    <table className="invoice-table">
+      <thead>
+        <tr>
+          <th>Product/Service Details</th>
+          <th>Qty.</th>
+          <th>Price (Per Product)</th>
+          <th>Amount</th>
+        </tr>
+      </thead>
 
-return (
-
-<div>
-
-<table className="w-full mt-6 border-collapse">
-
-<thead className="bg-teal-700 text-white">
-
-<tr>
-
-<th className="text-left p-3">Product / Service Details</th>
-
-<th className="p-3">Qty</th>
-
-<th className="p-3">Price (Per Product)</th>
-
-<th className="p-3">Amount</th>
-
-</tr>
-
-</thead>
-
-<tbody>
-
-{items.map((item, i) => {
-
-const amount = item.qty * item.price
-
-return (
-
-<tr key={i} className="border-b">
-
-<td className="p-3">{item.product}</td>
-
-<td className="p-3 text-center">{item.qty}</td>
-
-<td className="p-3 text-center">£{item.price}</td>
-
-<td className="p-3 text-center font-medium">£{amount}</td>
-
-</tr>
-
-)
-
-})}
-
-</tbody>
-
-</table>
-
-</div>
-
-)
-
+      <tbody>
+        {items.map((item, i) => {
+          const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0)
+          return (
+            <tr key={i}>
+              <td>{item.description}</td>
+              <td className="c">{item.qty}</td>
+              <td className="r">{fmt(item.price)}</td>
+              <td className="r">{fmt(amount)}</td>
+            </tr>
+          )
+        })}
+      </tbody>
+    </table>
+  )
 }
