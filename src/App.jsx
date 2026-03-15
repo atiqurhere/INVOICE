@@ -50,6 +50,7 @@ export default function App() {
 	
 	const [logoSrc, setLogoSrc] = useState(defaultLogo)
 	const [invoiceData, setInvoiceData] = useState(DEFAULT_INVOICE)
+	const [menuOpen, setMenuOpen] = useState(false)
 
 	// Auth and Session Check
 	useEffect(() => {
@@ -230,7 +231,17 @@ export default function App() {
 					<span>Invoice Generator</span>
 				</div>
 
-				<div className="topbar-actions">
+				<button
+					className="hamburger-btn"
+					onClick={() => setMenuOpen(o => !o)}
+					aria-label="Toggle menu"
+				>
+					{menuOpen ? '✕' : '☰'}
+				</button>
+
+				<div className={`topbar-actions${menuOpen ? ' menu-open' : ''}`}
+					onClick={() => setMenuOpen(false)}
+				>
 					{/* DASHBOARD TAB BEHAVIOR */}
 					{tab === "dashboard" && (
 						<>

@@ -30,14 +30,14 @@ textarea {
 .topbar {
   position: sticky;
   top: 0;
-  z-index: 10;
+  z-index: 100;
   display: flex;
-  flex-wrap: wrap;
   align-items: center;
-  gap: 8px;
-  padding: 10px 16px;
-  background: var(--teal);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  gap: 12px;
+  padding: 0 20px;
+  height: 56px;
+  background: linear-gradient(135deg, #1a6575 0%, #2a7f8e 60%, #1e8a7a 100%);
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.25);
 }
 
 .topbar-brand {
@@ -45,10 +45,11 @@ textarea {
   align-items: center;
   gap: 10px;
   color: #fff;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 700;
   flex: 1;
   min-width: 0;
+  letter-spacing: 0.01em;
 }
 
 .topbar-brand span {
@@ -58,56 +59,105 @@ textarea {
 }
 
 .topbar-logo {
-  height: 30px;
+  height: 28px;
   width: auto;
   flex-shrink: 0;
   object-fit: contain;
   filter: brightness(0) invert(1);
 }
 
+/* ---- Desktop nav actions ---- */
 .topbar-actions {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
   align-items: center;
 }
 
+/* ---- Hamburger button (hidden on desktop) ---- */
+.hamburger-btn {
+  display: none;
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 20px;
+  border-radius: 8px;
+  padding: 4px 10px;
+  cursor: pointer;
+  line-height: 1;
+  flex-shrink: 0;
+  transition: background 0.2s;
+}
+
+.hamburger-btn:hover {
+  background: rgba(255, 255, 255, 0.25);
+}
+
+/* ---- Premium button base ---- */
 .tab-btn,
 .action-btn,
 .print-btn,
 .add-btn,
 .danger-btn {
   border: none;
-  border-radius: 6px;
-  padding: 7px 12px;
+  border-radius: 8px;
+  padding: 7px 16px;
   cursor: pointer;
-  font-size: 12px;
+  font-size: 12.5px;
   font-weight: 600;
   white-space: nowrap;
+  letter-spacing: 0.02em;
+  transition: all 0.18s ease;
 }
 
 .tab-btn {
-  background: rgba(255, 255, 255, 0.22);
+  background: rgba(255, 255, 255, 0.14);
+  color: rgba(255,255,255,0.88);
+  border: 1px solid rgba(255,255,255,0.25);
+  backdrop-filter: blur(4px);
+}
+
+.tab-btn:hover {
+  background: rgba(255, 255, 255, 0.24);
   color: #fff;
 }
 
 .tab-btn.active {
   background: #fff;
   color: var(--teal);
+  border-color: transparent;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.15);
 }
 
 .action-btn {
-  background: #0b5f6d;
+  background: rgba(255,255,255,0.18);
   color: #fff;
+  border: 1px solid rgba(255,255,255,0.35);
+  backdrop-filter: blur(4px);
+}
+
+.action-btn:hover {
+  background: rgba(255,255,255,0.28);
 }
 
 .action-btn:disabled {
-  opacity: 0.6;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
 .print-btn {
   background: #f59e0b;
+  color: #fff;
+  border: none;
+}
+
+.danger-btn {
+  background: rgba(220, 38, 38, 0.22);
+  color: #fca5a5;
+  border: 1px solid rgba(220, 38, 38, 0.4);
+}
+
+.danger-btn:hover {
+  background: rgba(220, 38, 38, 0.38);
   color: #fff;
 }
 
@@ -558,6 +608,61 @@ textarea.field-input {
 }
 
 @media (max-width: 800px) {
+  /* Show hamburger, hide regular nav layout */
+  .hamburger-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .topbar {
+    flex-wrap: wrap;
+    height: auto;
+    padding: 10px 16px;
+    gap: 0;
+  }
+
+  .topbar-brand {
+    height: 44px;
+  }
+
+  /* Nav actions: hidden by default, shown as a full-width dropdown when .menu-open */
+  .topbar-actions {
+    display: none;
+    width: 100%;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 6px;
+    padding: 10px 0 6px;
+    border-top: 1px solid rgba(255,255,255,0.15);
+    margin-top: 8px;
+  }
+
+  .topbar-actions.menu-open {
+    display: flex;
+  }
+
+  .topbar-actions .tab-btn,
+  .topbar-actions .action-btn,
+  .topbar-actions .danger-btn,
+  .topbar-actions .print-btn {
+    width: 100%;
+    text-align: center;
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+
+  /* Export dropdown must be full-width too */
+  .export-dropdown-wrapper {
+    width: 100%;
+  }
+
+  .export-dropdown-menu {
+    width: 100%;
+    right: auto;
+    left: 0;
+  }
+
   .app-main {
     padding: 10px;
   }
