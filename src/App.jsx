@@ -94,18 +94,6 @@ export default function App() {
 		localStorage.setItem("inv_logo", logoSrc)
 	}, [tab, invoiceStatus, invoiceData, logoSrc])
 
-	// Warn on reload if unsaved
-	useEffect(() => {
-		const handleBeforeUnload = (e) => {
-			if (invoiceStatus === "unsaved" && tab === "create") {
-				e.preventDefault()
-				e.returnValue = "" // required for Chrome
-			}
-		}
-		window.addEventListener("beforeunload", handleBeforeUnload)
-		return () => window.removeEventListener("beforeunload", handleBeforeUnload)
-	}, [invoiceStatus, tab])
-
 	const handleLogout = async () => {
 		if (supabase) {
 			await supabase.auth.signOut()
