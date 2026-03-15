@@ -124,14 +124,14 @@ export default function App() {
 		if (data && data.length > 0) {
 			// Extract number, increment it
 			const lastNo = data[0].invoice_no
-			const match = lastNo.match(/_(\d{4})$/)
+			const match = lastNo.match(/-\s*(\d{4})$/)
 			if (match) {
 				const nextNum = parseInt(match[1], 10) + 1
 				const now = new Date()
 				const d = String(now.getDate()).padStart(2, '0')
 				const m = String(now.getMonth() + 1).padStart(2, '0')
 				const y = now.getFullYear()
-				return `PYV_${d}-${m}-${y}_${String(nextNum).padStart(4, '0')}`
+				return `#PYV - ${y}${m}${d} - ${String(nextNum).padStart(4, '0')}`
 			}
 		}
 		return generateInvoiceNumber() // fallback
