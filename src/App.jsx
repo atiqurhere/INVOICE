@@ -44,12 +44,27 @@ export default function App() {
 	const [authChecking, setAuthChecking] = useState(true)
 	const [isSaving, setIsSaving] = useState(false)
 	
-	const [tab, setTab] = useState("dashboard") // default landing
-	const [invoiceStatus, setInvoiceStatus] = useState("unsaved") // 'unsaved' | 'saved'
+	const [tab, setTab] = useState(() => {
+		const savedTab = localStorage.getItem("inv_current_tab")
+		return savedTab || "dashboard"
+	})
+	const [invoiceStatus, setInvoiceStatus] = useState(() => {
+		const savedStatus = localStorage.getItem("inv_status")
+		return savedStatus || "unsaved"
+	})
 	const [isExportOpen, setIsExportOpen] = useState(false)
 	
-	const [logoSrc, setLogoSrc] = useState(defaultLogo)
-	const [invoiceData, setInvoiceData] = useState(DEFAULT_INVOICE)
+	const [logoSrc, setLogoSrc] = useState(() => {
+		const savedLogo = localStorage.getItem("inv_logo")
+		return savedLogo || defaultLogo
+	})
+	const [invoiceData, setInvoiceData] = useState(() => {
+		const savedData = localStorage.getItem("inv_data")
+		if (savedData) {
+			try { return JSON.parse(savedData) } catch (e) { console.error(e) }
+		}
+		return DEFAULT_INVOICE
+	})
 	const [menuOpen, setMenuOpen] = useState(false)
 
 	// Auth and Session Check
@@ -70,6 +85,26 @@ export default function App() {
 
 		return () => subscription.unsubscribe()
 	}, [])
+
+	// Sync state to localStorage
+	useEffect(() => {
+		localStorage.setItem("inv_current_tab", tab)
+		localStorage.setItem("inv_status", invoiceStatus)
+		localStorage.setItem("inv_data", JSON.stringify(invoiceData))
+		localStorage.setItem("inv_logo", logoSrc)
+	}, [tab, invoiceStatus, invoiceData, logoSrc])
+
+	// Warn on reload if unsaved
+	useEffect(() => {
+		const handleBeforeUnload = (e) => {
+			if (invoiceStatus === "unsaved" && tab === "create") {
+				e.preventDefault()
+				e.returnValue = "" // required for Chrome
+			}
+		}
+		window.addEventListener("beforeunload", handleBeforeUnload)
+		return () => window.removeEventListener("beforeunload", handleBeforeUnload)
+	}, [invoiceStatus, tab])
 
 	const handleLogout = async () => {
 		if (supabase) {
@@ -145,6 +180,8 @@ export default function App() {
 			setTab("dashboard")
 			setInvoiceData(DEFAULT_INVOICE)
 			setInvoiceStatus("unsaved")
+			localStorage.removeItem("inv_data")
+			localStorage.removeItem("inv_status")
 		}
 	}
 
