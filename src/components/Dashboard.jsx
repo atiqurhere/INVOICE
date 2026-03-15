@@ -21,6 +21,7 @@ export default function Dashboard({ session, onEdit }) {
 		email: "info@printyourvibe.com",
 		logo_url: ""
 	})
+	const [isEditingCompany, setIsEditingCompany] = useState(false)
 	const [savingCompany, setSavingCompany] = useState(false)
 	const [uploadingLogo, setUploadingLogo] = useState(false)
 
@@ -147,7 +148,7 @@ export default function Dashboard({ session, onEdit }) {
 		if (error) {
 			alert("Error saving company settings: " + error.message)
 		} else {
-			alert("Company settings saved!")
+			setIsEditingCompany(false)
 		}
 	}
 
@@ -186,40 +187,71 @@ export default function Dashboard({ session, onEdit }) {
 	return (
 		<div className="dashboard-container">
 			<div className="dashboard-settings-card">
-				<h3>Company Profile Configuration</h3>
-				<p>These details will be used as the default sender information for all new invoices.</p>
-				<div className="config-grid">
-					<div className="field-wrap">
-						<label className="field-label">Company Name</label>
-						<input className="field-input" value={company.company_name} onChange={e => setCompany({...company, company_name: e.target.value})} />
-					</div>
-					<div className="field-wrap">
-						<label className="field-label">Phone Number</label>
-						<input className="field-input" value={company.phone} onChange={e => setCompany({...company, phone: e.target.value})} />
-					</div>
-					<div className="field-wrap">
-						<label className="field-label">Email Address</label>
-						<input className="field-input" value={company.email} onChange={e => setCompany({...company, email: e.target.value})} />
-					</div>
-					<div className="field-wrap">
-						<label className="field-label">Physical Address</label>
-						<input className="field-input" value={company.address} onChange={e => setCompany({...company, address: e.target.value})} />
-					</div>
-					<div className="field-wrap logo-upload-wrap">
-						<label className="field-label">Company Logo</label>
-						<div className="logo-row" style={{ marginTop: 8 }}>
-							{company.logo_url ? (
-								<img src={company.logo_url} alt="Company Logo" className="logo-preview" style={{ width: 80, height: 80, objectFit: "contain", background: "#f8f9fa", borderRadius: 8, padding: 4 }} />
-							) : (
-								<div style={{ width: 80, height: 80, background: "#f1f5f9", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#94a3b8" }}>No Logo</div>
-							)}
-							<input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} className="logo-input" />
+				<div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
+					<h3 style={{ margin: 0 }}>Company Profile</h3>
+					{!isEditingCompany && (
+						<button className="dash-action-btn edit-btn" onClick={() => setIsEditingCompany(true)}>
+							Edit Profile
+						</button>
+					)}
+				</div>
+
+				{!isEditingCompany ? (
+					<div style={{ display: "flex", gap: "24px", alignItems: "center", background: "#f8fafc", padding: "16px", borderRadius: "8px", border: "1px solid #e2e8f0" }}>
+						{company.logo_url ? (
+							<img src={company.logo_url} alt="Company Logo" style={{ width: 80, height: 80, objectFit: "contain", background: "#fff", borderRadius: 8, padding: 4, border: "1px solid #e2e8f0" }} />
+						) : (
+							<div style={{ width: 80, height: 80, background: "#fff", border: "1px solid #e2e8f0", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#94a3b8" }}>No Logo</div>
+						)}
+						<div>
+							<h4 style={{ margin: "0 0 4px", fontSize: "18px", color: "#0f172a" }}>{company.company_name}</h4>
+							<p style={{ margin: "0 0 2px", fontSize: "14px", color: "#64748b" }}>{company.address}</p>
+							<p style={{ margin: "0 0 2px", fontSize: "14px", color: "#64748b" }}>{company.email}</p>
+							<p style={{ margin: "0", fontSize: "14px", color: "#64748b" }}>{company.phone}</p>
 						</div>
 					</div>
-				</div>
-				<button className="action-btn" onClick={saveCompanySettings} disabled={savingCompany || uploadingLogo} style={{ marginTop: 16 }}>
-					{savingCompany ? "Saving..." : "Save Company Profile"}
-				</button>
+				) : (
+					<>
+						<p>These details will be used as the default sender information for all new invoices.</p>
+						<div className="config-grid">
+							<div className="field-wrap">
+								<label className="field-label">Company Name</label>
+								<input className="field-input" value={company.company_name} onChange={e => setCompany({...company, company_name: e.target.value})} />
+							</div>
+							<div className="field-wrap">
+								<label className="field-label">Phone Number</label>
+								<input className="field-input" value={company.phone} onChange={e => setCompany({...company, phone: e.target.value})} />
+							</div>
+							<div className="field-wrap">
+								<label className="field-label">Email Address</label>
+								<input className="field-input" value={company.email} onChange={e => setCompany({...company, email: e.target.value})} />
+							</div>
+							<div className="field-wrap">
+								<label className="field-label">Physical Address</label>
+								<input className="field-input" value={company.address} onChange={e => setCompany({...company, address: e.target.value})} />
+							</div>
+							<div className="field-wrap logo-upload-wrap">
+								<label className="field-label">Company Logo</label>
+								<div className="logo-row" style={{ marginTop: 8 }}>
+									{company.logo_url ? (
+										<img src={company.logo_url} alt="Company Logo" className="logo-preview" style={{ width: 80, height: 80, objectFit: "contain", background: "#f8f9fa", borderRadius: 8, padding: 4 }} />
+									) : (
+										<div style={{ width: 80, height: 80, background: "#f1f5f9", borderRadius: 8, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 12, color: "#94a3b8" }}>No Logo</div>
+									)}
+									<input type="file" accept="image/*" onChange={handleLogoUpload} disabled={uploadingLogo} className="logo-input" />
+								</div>
+							</div>
+						</div>
+						<div style={{ display: "flex", gap: "8px", marginTop: 16 }}>
+							<button className="action-btn" onClick={saveCompanySettings} disabled={savingCompany || uploadingLogo} style={{ background: "#059669" }}>
+								{savingCompany ? "Saving..." : "Save Profile"}
+							</button>
+							<button className="danger-btn" onClick={() => setIsEditingCompany(false)} disabled={savingCompany || uploadingLogo}>
+								Cancel
+							</button>
+						</div>
+					</>
+				)}
 			</div>
 
 			<div className="dashboard-stats-grid">
