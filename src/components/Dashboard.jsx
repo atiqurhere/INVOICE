@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useRef } from "react"
 import { supabase } from "../lib/supabase"
 import InvoicePreview from "./InvoicePreview"
-import { downloadPDF, downloadJPG } from "../utils/exportPDF"
+import { downloadPDF, downloadJPG, printInvoice } from "../utils/exportPDF"
 import defaultLogo from "../logo/logo.png"
 
 export default function Dashboard({ session, onEdit }) {
@@ -382,7 +382,7 @@ export default function Dashboard({ session, onEdit }) {
 										<div className="export-dropdown-menu">
 											<button onClick={() => { downloadPDF(modalRef.current); setIsExportOpen(false) }}>Download PDF</button>
 											<button onClick={() => { downloadJPG(modalRef.current); setIsExportOpen(false) }}>Download JPG</button>
-											<button onClick={() => { window.print(); setIsExportOpen(false) }}>Print</button>
+											<button onClick={() => { printInvoice(modalRef.current); setIsExportOpen(false) }}>Print</button>
 										</div>
 									)}
 								</div>
