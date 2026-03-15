@@ -11,10 +11,10 @@ export default function InvoiceTable({ items = [] }) {
     <table className="invoice-table">
       <thead>
         <tr>
-          <th>Product/Service Details</th>
-          <th>Qty.</th>
-          <th>Price (Per Product)</th>
-          <th>Amount</th>
+          <th>PRODUCT/SERVICE DETAILS</th>
+          <th className="c">QTY.</th>
+          <th className="c">PRICE (PER PRODUCT)</th>
+          <th className="r">AMOUNT</th>
         </tr>
       </thead>
 
@@ -23,10 +23,10 @@ export default function InvoiceTable({ items = [] }) {
           const amount = (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0)
           return (
             <tr key={i}>
-              <td>{item.description}</td>
-              <td className="c">{item.qty}</td>
-              <td className="r">{fmt(item.price)}</td>
-              <td className="r">{fmt(amount)}</td>
+              <td style={{ fontWeight: 600 }}>{item.description}</td>
+              <td className="c" style={{ fontWeight: 600 }}>{item.qty}</td>
+              <td className="c" style={{ fontWeight: 600 }}>{fmt(item.price)}</td>
+              <td className="r" style={{ fontWeight: 600 }}>{fmt(amount)}</td>
             </tr>
           )
         })}

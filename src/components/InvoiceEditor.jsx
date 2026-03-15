@@ -157,6 +157,12 @@ export default function InvoiceEditor({ logoSrc, onLogoChange, data, setData }) 
 			</section>
 
 			<section className="editor-section">
+				<h3 className="section-title">Additional Totals</h3>
+				<Field label="Delivery Cost (£)" type="number" value={data.totals?.delivery || 0} onChange={(v) => setData(prev => ({ ...prev, totals: { ...prev.totals, delivery: parseFloat(v) || 0 } }))} />
+				<Field label="Tax (£)" type="number" value={data.totals?.tax || 0} onChange={(v) => setData(prev => ({ ...prev, totals: { ...prev.totals, tax: parseFloat(v) || 0 } }))} />
+			</section>
+
+			<section className="editor-section">
 				<h3 className="section-title">Terms &amp; Conditions</h3>
 				{terms.map((term, i) => (
 					<div className="term-row" key={i}>

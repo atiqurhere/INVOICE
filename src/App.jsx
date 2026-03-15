@@ -27,11 +27,12 @@ const DEFAULT_INVOICE = {
 	billTo: { name: "", phone: "", email: "" },
 	payment: { accountName: "", accountNumber: "", sortCode: "" },
 	items: [{ description: "", qty: 1, price: 0 }],
+	totals: { delivery: 0, tax: 0 },
 	terms: [
-		"Please review all artwork carefully before submission: spelling, Pantone colours, placement and sizing.",
-		"Standard production: 3-7 working days from proof approval and full payment.",
-		"Urgent orders? Ask about our same-day service.",
-		"Orders are processed only after full payment.",
+		"1. Please review all artwork carefully before submission: spelling, Pantone colours, placement & sizing.",
+		"2. Standard production: 3-7 working days from proof approval & full payment.",
+		"3. Urgent orders? Ask about our same-day service!",
+		"4. Orders are processed only after full payment.",
 	],
 	thankYou: "Thank you for your purchase with us",
 }
