@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from "react"
 import { supabase } from "../lib/supabase"
-import dayjs from "dayjs" // Let's use standard Date grouping for simplicity instead of adding new dependencies if we can
 
 export default function Dashboard({ session, onEdit }) {
 	const [invoices, setInvoices] = useState([])
