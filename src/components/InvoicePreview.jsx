@@ -40,7 +40,7 @@ const InvoicePreview = forwardRef(({ invoiceData, logoSrc }, ref) => {
           </div>
           <div className="invoice-dates-box">
             <div className="date-row"><span>Issued</span><span>{invoice.issued}</span></div>
-            <div className="date-row"><span>Delivery</span><span>{invoice.delivery}</span></div>
+            <div className="date-row alt-row"><span>Delivery</span><span>{invoice.delivery}</span></div>
             <div className="date-row"><span>Due</span><span>{fmt(total)}</span></div>
           </div>
           <div className="invoice-total-box">
