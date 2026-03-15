@@ -249,7 +249,7 @@ export default function App() {
 							<button type="button" className="action-btn" onClick={handleCreateNew} style={{ background: TEAL }}>
 								+ Create New
 							</button>
-							<button type="button" className="danger-btn" onClick={handleLogout} style={{ marginLeft: "8px" }}>
+							<button type="button" className="danger-btn" onClick={handleLogout}>
 								Logout
 							</button>
 						</>
@@ -311,7 +311,7 @@ export default function App() {
 								</>
 							)}
 
-							<button type="button" className="danger-btn" onClick={navigateToDashboard} style={{ marginLeft: "8px" }}>
+							<button type="button" className="danger-btn" onClick={navigateToDashboard}>
 								Dashboard
 							</button>
 						</>

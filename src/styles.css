@@ -69,7 +69,7 @@ textarea {
 /* ---- Desktop nav actions ---- */
 .topbar-actions {
   display: flex;
-  gap: 6px;
+  gap: 8px;
   align-items: center;
 }
 
