@@ -20,8 +20,9 @@ const InvoicePreview = forwardRef(({ invoiceData, logoSrc }, ref) => {
   const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0), 0)
   const delivery = parseFloat(totals?.delivery) || 0
   const tax = parseFloat(totals?.tax) || 0
-  const due = parseFloat(totals?.due) || 0
   const total = subtotal + delivery + tax
+  // Due defaults to total; user can override for partial payments
+  const due = totals?.due > 0 ? parseFloat(totals.due) : total
 
   return (
     <div ref={ref} className="invoice-preview" id="inv">
