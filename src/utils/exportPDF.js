@@ -32,14 +32,23 @@ export const printInvoice = async (ref) => {
   const canvas = await html2canvas(ref, CANVAS_OPTIONS)
   const imgData = canvas.toDataURL("image/png")
 
-  const win = window.open("", "_blank")
-  if (!win) return
+  // Create an invisible iframe to handle the print dialogue on mobile & desktop
+  const iframe = document.createElement('iframe')
+  iframe.style.position = 'fixed'
+  iframe.style.right = '0'
+  iframe.style.bottom = '0'
+  iframe.style.width = '0'
+  iframe.style.height = '0'
+  iframe.style.border = '0'
+  document.body.appendChild(iframe)
 
-  win.document.write(`
+  const doc = iframe.contentWindow.document
+  doc.open()
+  doc.write(`
     <!DOCTYPE html>
     <html>
     <head>
-      <title>Invoice</title>
+      <title>Print Invoice</title>
       <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         body { background: #fff; }
@@ -51,10 +60,17 @@ export const printInvoice = async (ref) => {
         }
       </style>
     </head>
-    <body>
-      <img src="${imgData}" onload="window.print(); window.close();" />
+    <body onload="window.focus(); window.print();">
+      <img src="${imgData}" />
     </body>
     </html>
   `)
-  win.document.close()
+  doc.close()
+
+  // Clean up the iframe after a generous delay assuming the print dialog was opened/closed
+  setTimeout(() => {
+    if (document.body.contains(iframe)) {
+      document.body.removeChild(iframe)
+    }
+  }, 10000)
 }

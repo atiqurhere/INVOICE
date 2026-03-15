@@ -388,6 +388,40 @@ export default function App() {
 									if (invoiceStatus === "saved") setInvoiceStatus("unsaved")
 								}}
 							/>
+
+							<div className="editor-actions-bottom" style={{ marginTop: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
+								{invoiceStatus !== "saved" ? (
+									<>
+										<button type="button" className="action-btn" onClick={() => handleSave("draft")} disabled={isSaving} style={{ flex: 1, minWidth: '120px' }}>
+											Save as Draft
+										</button>
+										<button type="button" className="action-btn" onClick={() => handleSave("saved")} disabled={isSaving} style={{ background: "#059669", flex: 1, minWidth: '120px' }}>
+											Save Invoice
+										</button>
+										<button type="button" className="danger-btn" onClick={handleCancel} style={{ flex: 1, minWidth: '120px' }}>
+											Cancel
+										</button>
+									</>
+								) : (
+									<div className="export-dropdown-wrapper" style={{ position: "relative", display: "inline-block", flex: 1 }}>
+										<button 
+											type="button" 
+											className="action-btn" 
+											onClick={() => setIsExportOpen(!isExportOpen)} 
+											style={{ background: TEAL, width: '100%' }}
+										>
+											Export ▼
+										</button>
+										{isExportOpen && (
+											<div className="export-dropdown-menu" style={{ bottom: '100%', top: 'auto', marginBottom: '8px', minWidth: '200px' }}>
+												<button disabled={isActionDisabled} onClick={() => { downloadPDF(ref.current); setIsExportOpen(false) }}>Download PDF</button>
+												<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current); setIsExportOpen(false) }}>Download JPG</button>
+												<button disabled={isActionDisabled} onClick={() => { printInvoice(ref.current); setIsExportOpen(false) }}>Print</button>
+											</div>
+										)}
+									</div>
+								)}
+							</div>
 						</div>
 						<div className="preview-card">
 							<InvoicePreview ref={ref} invoiceData={invoiceData} logoSrc={logoSrc} />

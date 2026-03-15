@@ -20,6 +20,8 @@ const InvoicePreview = forwardRef(({ invoiceData, logoSrc }, ref) => {
   const subtotal = items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0), 0)
   const delivery = parseFloat(totals?.delivery) || 0
   const tax = parseFloat(totals?.tax) || 0
+  const paid = parseFloat(totals?.paid) || 0
+  const due = parseFloat(totals?.due) || 0
   const total = subtotal + delivery + tax
 
   return (
@@ -91,6 +93,14 @@ const InvoicePreview = forwardRef(({ invoiceData, logoSrc }, ref) => {
           <div className="totals-grand total-red">
             <span>Total (Inclusive vat)</span>
             <span>{fmt(total)}</span>
+          </div>
+          <div className="totals-row" style={{ marginTop: '4px' }}>
+            <span>Amount Paid</span>
+            <span>{fmt(paid)}</span>
+          </div>
+          <div className="totals-row" style={{ fontWeight: 'bold' }}>
+            <span>Amount Due</span>
+            <span>{fmt(due)}</span>
           </div>
         </div>
       </div>
