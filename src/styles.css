@@ -129,14 +129,25 @@ textarea {
 }
 
 .action-btn {
+  background: var(--teal, #2a7f8e);
+  color: #fff;
+  border: 1px solid rgba(255,255,255,0.2);
+}
+
+/* Topbar-specific translucent override */
+.topbar .action-btn {
   background: rgba(255,255,255,0.18);
   color: #fff;
   border: 1px solid rgba(255,255,255,0.35);
   backdrop-filter: blur(4px);
 }
 
-.action-btn:hover {
+.topbar .action-btn:hover {
   background: rgba(255,255,255,0.28);
+}
+
+.action-btn:hover {
+  background: #1e6878;
 }
 
 .action-btn:disabled {
