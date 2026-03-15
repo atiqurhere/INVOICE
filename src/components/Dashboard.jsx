@@ -13,6 +13,7 @@ export default function Dashboard({ session, onEdit }) {
 
 	const [viewingInvoice, setViewingInvoice] = useState(null)
 	const [isExportOpen, setIsExportOpen] = useState(false)
+	const [searchQuery, setSearchQuery] = useState("")
 
 	const [company, setCompany] = useState({
 		company_name: "Print your vibe",
@@ -303,6 +304,19 @@ export default function Dashboard({ session, onEdit }) {
 
 			<div className="dashboard-table-wrap">
 				<h3>Manage Invoices</h3>
+
+				{/* Search bar */}
+				<div style={{ marginBottom: '12px', position: 'relative' }}>
+					<input
+						type="text"
+						className="field-input"
+						placeholder="🔍 Search by invoice #, customer name, amount, status, or date..."
+						value={searchQuery}
+						onChange={(e) => setSearchQuery(e.target.value)}
+						style={{ width: '100%', boxSizing: 'border-box', paddingLeft: '14px' }}
+					/>
+				</div>
+
 				<div style={{ overflowX: "auto", WebkitOverflowScrolling: "touch" }}>
 				<table className="dashboard-table">
 					<thead>
@@ -316,12 +330,26 @@ export default function Dashboard({ session, onEdit }) {
 						</tr>
 					</thead>
 					<tbody>
-						{invoices.length === 0 ? (
-							<tr>
-								<td colSpan="6" style={{ textAlign: "center", padding: 20 }}>No invoices found.</td>
-							</tr>
-						) : (
-							invoices.map((inv) => (
+						{(() => {
+							const q = searchQuery.toLowerCase().trim()
+							const filtered = q ? invoices.filter(inv =>
+								(inv.invoice_no || "").toLowerCase().includes(q) ||
+								(inv.customer || "").toLowerCase().includes(q) ||
+								(inv.status || "").toLowerCase().includes(q) ||
+								String(Number(inv.total).toFixed(2)).includes(q) ||
+								new Date(inv.created_at).toLocaleDateString().includes(q)
+							) : invoices
+
+							if (filtered.length === 0) {
+								return (
+									<tr>
+										<td colSpan="6" style={{ textAlign: "center", padding: 20 }}>
+											{q ? `No invoices found matching "${searchQuery}"` : "No invoices found."}
+										</td>
+									</tr>
+								)
+							}
+							return filtered.map((inv) => (
 								<tr key={inv.id}>
 									<td>{new Date(inv.created_at).toLocaleDateString()}</td>
 									<td>{inv.invoice_no}</td>
@@ -349,7 +377,8 @@ export default function Dashboard({ session, onEdit }) {
 									</td>
 								</tr>
 							))
-						)}
+						})()
+						}
 					</tbody>
 				</table>
 				</div>
