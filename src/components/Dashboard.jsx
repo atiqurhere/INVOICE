@@ -19,6 +19,9 @@ export default function Dashboard({ session, onEdit }) {
 		phone: "+44 7983 567819",
 		address: "270 Teviot St, London E14 6QS, UK",
 		email: "info@printyourvibe.com",
+		payment_account_name: "",
+		payment_account_number: "",
+		payment_sort_code: "",
 		logo_url: ""
 	})
 	const [isEditingCompany, setIsEditingCompany] = useState(false)
@@ -207,7 +210,16 @@ export default function Dashboard({ session, onEdit }) {
 							<h4 style={{ margin: "0 0 4px", fontSize: "18px", color: "#0f172a" }}>{company.company_name}</h4>
 							<p style={{ margin: "0 0 2px", fontSize: "14px", color: "#64748b" }}>{company.address}</p>
 							<p style={{ margin: "0 0 2px", fontSize: "14px", color: "#64748b" }}>{company.email}</p>
-							<p style={{ margin: "0", fontSize: "14px", color: "#64748b" }}>{company.phone}</p>
+							<p style={{ margin: "0 0 12px", fontSize: "14px", color: "#64748b" }}>{company.phone}</p>
+
+							{(company.payment_account_name || company.payment_account_number) && (
+								<div style={{ background: "#e2e8f0", padding: "8px 12px", borderRadius: "6px", fontSize: "13px", color: "#475569" }}>
+									<strong style={{ display: "block", marginBottom: "4px", color: "#334155" }}>Bank Details</strong>
+									{company.payment_account_name && <div>Name: {company.payment_account_name}</div>}
+									{company.payment_account_number && <div>Account: {company.payment_account_number}</div>}
+									{company.payment_sort_code && <div>Sort Code: {company.payment_sort_code}</div>}
+								</div>
+							)}
 						</div>
 					</div>
 				) : (
@@ -229,6 +241,18 @@ export default function Dashboard({ session, onEdit }) {
 							<div className="field-wrap">
 								<label className="field-label">Physical Address</label>
 								<input className="field-input" value={company.address} onChange={e => setCompany({...company, address: e.target.value})} />
+							</div>
+							<div className="field-wrap">
+								<label className="field-label">Bank Account Name</label>
+								<input className="field-input" value={company.payment_account_name} onChange={e => setCompany({...company, payment_account_name: e.target.value})} />
+							</div>
+							<div className="field-wrap">
+								<label className="field-label">Account Number</label>
+								<input className="field-input" value={company.payment_account_number} onChange={e => setCompany({...company, payment_account_number: e.target.value})} />
+							</div>
+							<div className="field-wrap">
+								<label className="field-label">Sort Code</label>
+								<input className="field-input" value={company.payment_sort_code} onChange={e => setCompany({...company, payment_sort_code: e.target.value})} />
 							</div>
 							<div className="field-wrap logo-upload-wrap">
 								<label className="field-label">Company Logo</label>

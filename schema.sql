@@ -9,9 +9,17 @@ CREATE TABLE IF NOT EXISTS public.company_config (
     phone TEXT NOT NULL DEFAULT '+44 7983 567819',
     address TEXT NOT NULL DEFAULT '270 Teviot St, London E14 6QS, UK',
     email TEXT NOT NULL DEFAULT 'info@printyourvibe.com',
+    payment_account_name TEXT,
+    payment_account_number TEXT,
+    payment_sort_code TEXT,
     logo_url TEXT,
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
+
+-- Note: To update an existing database:
+-- ALTER TABLE public.company_config ADD COLUMN IF NOT EXISTS payment_account_name TEXT;
+-- ALTER TABLE public.company_config ADD COLUMN IF NOT EXISTS payment_account_number TEXT;
+-- ALTER TABLE public.company_config ADD COLUMN IF NOT EXISTS payment_sort_code TEXT;
 
 -- Enable RLS for company_config
 ALTER TABLE public.company_config ENABLE ROW LEVEL SECURITY;

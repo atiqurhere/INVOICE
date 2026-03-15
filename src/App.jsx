@@ -105,6 +105,7 @@ export default function App() {
 		
 		let nextNum = generateInvoiceNumber()
 		let companyData = { name: "", phone: "", address: "", email: "" }
+		let paymentData = { accountName: "", accountNumber: "", sortCode: "" }
 		let logo = defaultLogo
 
 		if (session) {
@@ -112,6 +113,11 @@ export default function App() {
 			const { data } = await supabase.from("company_config").select("*").eq("user_id", session.user.id).single()
 			if (data) {
 				companyData = { name: data.company_name, phone: data.phone, address: data.address, email: data.email }
+				paymentData = { 
+					accountName: data.payment_account_name || "", 
+					accountNumber: data.payment_account_number || "", 
+					sortCode: data.payment_sort_code || "" 
+				}
 				if (data.logo_url) logo = data.logo_url
 			}
 		}
@@ -120,6 +126,7 @@ export default function App() {
 		setInvoiceData({
 			...DEFAULT_INVOICE,
 			company: companyData,
+			payment: paymentData,
 			invoice: { ...DEFAULT_INVOICE.invoice, number: nextNum }
 		})
 		
