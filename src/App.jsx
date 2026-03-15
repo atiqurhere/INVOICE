@@ -97,7 +97,7 @@ export default function App() {
 	}
 
 	const handleCreateNew = async () => {
-		if (invoiceStatus === "unsaved" || document.isDirty) {
+		if (tab !== "dashboard" && (invoiceStatus === "unsaved" || document.isDirty)) {
 			if (!window.confirm("You have unsaved changes! Are you sure you want to abandon this invoice?")) {
 				return
 			}
