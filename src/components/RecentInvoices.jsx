@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from "react"
 import { supabase } from "../lib/supabase"
 
-export default function RecentInvoices() {
+export default function RecentInvoices({ session }) {
   const [list, setList] = useState([])
   const [error, setError] = useState("")
 
   useEffect(() => {
-    load()
-  }, [])
+    if (session) {
+      load()
+    }
+  }, [session])
 
   const load = async () => {
     if (!supabase) {
@@ -18,6 +20,7 @@ export default function RecentInvoices() {
     const { data, error: queryError } = await supabase
       .from("invoices")
       .select("*")
+      .eq("user_id", session.user.id)
       .order("created_at", { ascending: false })
       .limit(8)
 

@@ -611,3 +611,218 @@ textarea.field-input {
     page-break-inside: avoid;
   }
 }
+
+/* --- Login Screen Styling --- */
+.login-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  background: linear-gradient(135deg, var(--teal) 0%, #1a515c 100%);
+  padding: 24px;
+}
+
+.login-card {
+  background: #fff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 420px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.25);
+  padding: 40px 32px;
+  text-align: left;
+}
+
+.login-header {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.login-header h2 {
+  font-size: 26px;
+  color: var(--teal);
+  margin: 0 0 8px;
+  font-weight: 700;
+}
+
+.login-header p {
+  color: var(--muted);
+  font-size: 14px;
+  margin: 0;
+}
+
+.login-form .field-wrap {
+  margin-bottom: 20px;
+}
+
+.login-form .field-input {
+  padding: 10px 14px;
+  font-size: 14px;
+}
+
+.login-options {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 13px;
+  color: var(--muted);
+  margin-bottom: 24px;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.checkbox-label input {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  accent-color: var(--teal);
+}
+
+.login-btn {
+  width: 100%;
+  padding: 12px;
+  font-size: 15px;
+  margin-bottom: 24px;
+  border-radius: 8px;
+}
+
+.login-note {
+  text-align: center;
+  font-size: 12px;
+  color: #888;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.login-error {
+  background: #fee2e2;
+  color: #dc2626;
+  padding: 10px 14px;
+  border-radius: 6px;
+  font-size: 13px;
+  margin-bottom: 20px;
+  border: 1px solid #fecaca;
+}
+
+/* --- Dashboard Styling --- */
+.dashboard-container {
+  padding: 24px;
+  max-width: 1000px;
+  margin: 0 auto;
+}
+
+.dashboard-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 16px;
+  margin-bottom: 32px;
+}
+
+.stat-card {
+  background: #fff;
+  border: 1px solid var(--line);
+  padding: 20px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  text-align: center;
+}
+
+.stat-card h4 {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  font-weight: 600;
+}
+
+.stat-card p {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--teal);
+}
+
+.stat-card.lifetime-card {
+  background: var(--teal);
+  border-color: var(--teal);
+}
+
+.stat-card.lifetime-card h4,
+.stat-card.lifetime-card p {
+  color: #fff;
+}
+
+.dashboard-table-wrap {
+  background: #fff;
+  padding: 24px;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
+  border: 1px solid var(--line);
+}
+
+.dashboard-table-wrap h3 {
+  margin: 0 0 16px;
+  color: var(--teal);
+  font-size: 18px;
+}
+
+.dashboard-table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.dashboard-table th,
+.dashboard-table td {
+  padding: 12px;
+  text-align: left;
+  border-bottom: 1px solid var(--line);
+  font-size: 14px;
+}
+
+.dashboard-table th {
+  background: #f8fafc;
+  color: var(--muted);
+  font-weight: 600;
+  font-size: 12px;
+  text-transform: uppercase;
+}
+
+.action-col {
+  text-align: right;
+  width: 150px;
+}
+
+.dash-action-btn {
+  border: none;
+  background: none;
+  padding: 6px 10px;
+  border-radius: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  margin-left: 8px;
+}
+
+.dash-action-btn.edit-btn {
+  color: #0284c7;
+  background: #e0f2fe;
+}
+
+.dash-action-btn.edit-btn:hover {
+  background: #bae6fd;
+}
+
+.dash-action-btn.delete-btn {
+  color: #dc2626;
+  background: #fee2e2;
+}
+
+.dash-action-btn.delete-btn:hover {
+  background: #fecaca;
+}
+

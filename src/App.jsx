@@ -3,7 +3,11 @@ import React, { useRef, useState } from "react"
 import InvoiceEditor from "./components/InvoiceEditor"
 import InvoicePreview from "./components/InvoicePreview"
 import RecentInvoices from "./components/RecentInvoices"
+import Login from "./components/Login"
+import Dashboard from "./components/Dashboard"
 import defaultLogo from "./logo/logo.png"
+
+import { supabase } from "./lib/supabase"
 
 import { downloadPDF, downloadJPG } from "./utils/exportPDF"
 import { generateInvoiceNumber } from "./utils/invoiceNumber"
@@ -12,6 +16,10 @@ const TEAL = "#2a7f8e"
 
 export default function App() {
 	const ref = useRef(null)
+
+	const [session, setSession] = useState(null)
+	const [authChecking, setAuthChecking] = useState(true)
+	const [isSaving, setIsSaving] = useState(false)
 
 	const [tab, setTab] = useState("edit")
 	const [logoSrc, setLogoSrc] = useState(defaultLogo)
@@ -59,6 +67,72 @@ export default function App() {
 
 	const actionDisabled = !ref.current
 
+	// Check for existing session on load
+	React.useEffect(() => {
+		if (!supabase) {
+			setAuthChecking(false)
+			return
+		}
+
+		supabase.auth.getSession().then(({ data: { session } }) => {
+			setSession(session)
+			setAuthChecking(false)
+		})
+
+		const {
+			data: { subscription },
+		} = supabase.auth.onAuthStateChange((_event, session) => {
+			setSession(session)
+		})
+
+		return () => subscription.unsubscribe()
+	}, [])
+
+	const handleLogout = async () => {
+		if (supabase) {
+			await supabase.auth.signOut()
+			setSession(null)
+		}
+	}
+
+	const handleSave = async () => {
+		if (!supabase || !session) return
+		setIsSaving(true)
+		
+		const total = invoiceData.items.reduce((sum, item) => sum + (parseFloat(item.qty) || 0) * (parseFloat(item.price) || 0), 0)
+
+		const { error } = await supabase.from("invoices").insert([
+			{
+				user_id: session.user.id,
+				invoice_no: invoiceData.invoice.number,
+				customer: invoiceData.billTo.name,
+				total: total,
+				data: invoiceData // Save full json payload for future editing if needed
+			}
+		])
+
+		setIsSaving(false)
+		
+		if (error) {
+			alert("Error saving invoice: " + error.message)
+		} else {
+			alert("Invoice saved successfully!")
+		}
+	}
+
+	if (authChecking) {
+		return <div className="app-shell" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}><p>Loading...</p></div>
+	}
+
+	if (!session) {
+		return <Login onLoginSuccess={setSession} />
+	}
+
+	const handleEditInvoice = (docData) => {
+		setInvoiceData(docData)
+		setTab("edit")
+	}
+
 	return (
 		<div className="app-shell">
 			<header className="topbar">
@@ -82,20 +156,39 @@ export default function App() {
 					>
 						Preview
 					</button>
-					<button type="button" className="action-btn" disabled={actionDisabled} onClick={() => downloadPDF(ref.current)}>
-						Download PDF
+					<button
+						type="button"
+						className={`tab-btn ${tab === "dashboard" ? "active" : ""}`}
+						onClick={() => setTab("dashboard")}
+					>
+						Dashboard
 					</button>
-					<button type="button" className="action-btn" disabled={actionDisabled} onClick={() => downloadJPG(ref.current)}>
-						Download JPG
-					</button>
-					<button type="button" className="print-btn" onClick={() => window.print()}>
-						Print
+					
+					{tab !== "dashboard" && (
+						<>
+							<button type="button" className="action-btn" disabled={actionDisabled} onClick={() => downloadPDF(ref.current)}>
+								Download PDF
+							</button>
+							<button type="button" className="action-btn" disabled={actionDisabled} onClick={() => downloadJPG(ref.current)}>
+								Download JPG
+							</button>
+							<button type="button" className="action-btn" disabled={actionDisabled || isSaving} onClick={handleSave} style={{ background: "#059669" }}>
+								{isSaving ? "Saving..." : "Save to Account"}
+							</button>
+							<button type="button" className="print-btn" onClick={() => window.print()}>
+								Print
+							</button>
+						</>
+					)}
+					
+					<button type="button" className="danger-btn" onClick={handleLogout} style={{ marginLeft: "8px" }}>
+						Logout
 					</button>
 				</div>
 			</header>
 
 			<main className="app-main">
-				{tab === "edit" ? (
+				{tab === "edit" && (
 					<div className="edit-layout">
 						<div>
 							<InvoiceEditor
@@ -104,17 +197,23 @@ export default function App() {
 								data={invoiceData}
 								setData={setInvoiceData}
 							/>
-							<RecentInvoices />
+							<RecentInvoices session={session} />
 						</div>
 
 						<div className="preview-card">
 							<InvoicePreview ref={ref} invoiceData={invoiceData} logoSrc={logoSrc} />
 						</div>
 					</div>
-				) : (
+				)}
+
+				{tab === "preview" && (
 					<div className="preview-card preview-only">
 						<InvoicePreview ref={ref} invoiceData={invoiceData} logoSrc={logoSrc} />
 					</div>
+				)}
+
+				{tab === "dashboard" && (
+					<Dashboard session={session} onEdit={handleEditInvoice} />
 				)}
 			</main>
 		</div>
