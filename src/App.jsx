@@ -348,9 +348,10 @@ export default function App() {
 											type="button" 
 											className="action-btn" 
 											onClick={() => setIsExportOpen(!isExportOpen)} 
-											style={{ background: TEAL }}
+											style={{ background: TEAL, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
 										>
-											Export ▼
+											Export
+											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
 										</button>
 										{isExportOpen && (
 											<div className="export-dropdown-menu">
@@ -408,9 +409,10 @@ export default function App() {
 											type="button" 
 											className="action-btn" 
 											onClick={() => setIsExportOpen(!isExportOpen)} 
-											style={{ background: TEAL, width: '100%' }}
+											style={{ background: TEAL, width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
 										>
-											Export ▼
+											Export
+											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
 										</button>
 										{isExportOpen && (
 											<div className="export-dropdown-menu" style={{ bottom: '100%', top: 'auto', marginBottom: '8px', minWidth: '200px' }}>

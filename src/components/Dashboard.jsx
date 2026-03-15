@@ -373,10 +373,11 @@ export default function Dashboard({ session, onEdit }) {
 								<div className="export-dropdown-wrapper" style={{ marginLeft: "8px" }}>
 									<button 
 										className="dash-action-btn action-btn" 
-										style={{ background: "#2a7f8e", color: "#fff" }}
+										style={{ background: "#2a7f8e", color: "#fff", display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
 										onClick={() => setIsExportOpen(!isExportOpen)}
 									>
-										Export ▼
+										Export
+										<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
 									</button>
 									{isExportOpen && (
 										<div className="export-dropdown-menu">
