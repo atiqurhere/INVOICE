@@ -113,9 +113,14 @@ export default function PublicInvoicePage({ mode, invoiceNo }) {
   const company = invoicePayload?.company
   const logoSrc = company?.logo_url || invoice?.data?.company?.logo_url || defaultLogo
   const copy = MODE_COPY[mode] || MODE_COPY.invoice
-  const statusLabel = invoice?.status || (mode === "success" ? "paid" : mode === "cancelled" ? "cancelled" : "saved")
+  const statusLabel = mode === "success"
+    ? "Paid"
+    : mode === "cancelled"
+      ? "Cancelled"
+      : invoice?.status || "saved"
   const origin = typeof window !== "undefined" ? window.location.origin : ""
   const paymentPageUrl = invoice?.payment_page_url || (invoiceNo && origin ? `${origin}/pay/${encodeURIComponent(invoiceNo)}` : "")
+  const summaryTone = mode === "success" ? "success" : mode === "cancelled" ? "warning" : "info"
 
   const openInvoice = () => {
     if (invoiceNo) {
@@ -151,6 +156,13 @@ export default function PublicInvoicePage({ mode, invoiceNo }) {
 
         {!loading && !redirecting && invoice && (
           <>
+            <div className={`public-page-card public-page-card-${summaryTone}`} style={{ marginBottom: 16 }}>
+              <h2>{copy.title}</h2>
+              <p>{copy.copy}</p>
+              {mode === "success" && <p style={{ marginTop: 12, color: "#166534", fontWeight: 700 }}>Payment confirmed. The invoice status has been updated.</p>}
+              {mode === "cancelled" && <p style={{ marginTop: 12, color: "#b45309", fontWeight: 700 }}>Payment was not completed. You can try again from this page.</p>}
+            </div>
+
             <div className="public-summary-grid">
               <div className="public-summary-card">
                 <span>Status</span>
