@@ -4,6 +4,15 @@ import InvoicePreview from "./InvoicePreview"
 import { downloadPDF, downloadJPG, printInvoice } from "../utils/exportPDF"
 import defaultLogo from "../logo/logo.png"
 
+const STATUS_STYLES = {
+	draft: { label: "Draft", backgroundColor: "#fef3c7", color: "#92400e" },
+	saved: { label: "Saved", backgroundColor: "#dcfce3", color: "#166534" },
+	pending: { label: "Pending", backgroundColor: "#dbeafe", color: "#1d4ed8" },
+	paid: { label: "Paid", backgroundColor: "#dcfce3", color: "#166534" },
+	failed: { label: "Failed", backgroundColor: "#fee2e2", color: "#b91c1c" },
+	cancelled: { label: "Cancelled", backgroundColor: "#f1f5f9", color: "#475569" },
+}
+
 export default function Dashboard({ session, onEdit }) {
 	const modalRef = useRef(null)
 
@@ -86,8 +95,8 @@ export default function Dashboard({ session, onEdit }) {
 		let d = 0, w = 0, m = 0, y = 0, l = 0
 
 		records.forEach((inv) => {
-			// Do not calculate Drafts into revenue!
-			if (inv.status !== 'saved') return
+			// Only count paid invoices toward revenue.
+			if (inv.status !== 'paid') return
 
 			const invoiceDate = new Date(inv.created_at).getTime()
 			const val = parseFloat(inv.total) || 0
@@ -134,7 +143,7 @@ export default function Dashboard({ session, onEdit }) {
 	}
 
 	const handleEditFromModal = () => {
-		onEdit(viewingInvoice.data, viewingInvoice.status)
+		onEdit(viewingInvoice.data, viewingInvoice.status, viewingInvoice)
 		setViewingInvoice(null)
 	}
 
@@ -359,10 +368,10 @@ export default function Dashboard({ session, onEdit }) {
 											borderRadius: "4px", 
 											fontSize: "12px", 
 											fontWeight: "600",
-											backgroundColor: inv.status === 'draft' ? '#fef3c7' : '#dcfce3',
-											color: inv.status === 'draft' ? '#92400e' : '#166534'
+											backgroundColor: STATUS_STYLES[inv.status]?.backgroundColor || '#e2e8f0',
+											color: STATUS_STYLES[inv.status]?.color || '#334155'
 										}}>
-											{inv.status === 'draft' ? "Draft" : "Saved"}
+											{STATUS_STYLES[inv.status]?.label || inv.status || "Saved"}
 										</span>
 									</td>
 									<td>{inv.customer}</td>

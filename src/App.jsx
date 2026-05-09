@@ -4,6 +4,7 @@ import InvoiceEditor from "./components/InvoiceEditor"
 import InvoicePreview from "./components/InvoicePreview"
 import Login from "./components/Login"
 import Dashboard from "./components/Dashboard"
+import PublicInvoicePage from "./components/PublicInvoicePage"
 import defaultLogo from "./logo/logo.png"
 
 import { supabase } from "./lib/supabase"
@@ -37,12 +38,58 @@ const DEFAULT_INVOICE = {
 	thankYou: "Thank you for your purchase with us",
 }
 
+const FINAL_INVOICE_STATUSES = new Set(["saved", "pending", "paid", "failed", "cancelled"])
+
+const getCurrentRoute = () => {
+	if (typeof window === "undefined") return null
+
+	const pathname = window.location.pathname.replace(/\/+$/, "") || "/"
+	const segments = pathname.split("/").filter(Boolean)
+	const searchParams = new URLSearchParams(window.location.search)
+
+	if (segments[0] === "invoice" && segments[1]) {
+		return { kind: "invoice", invoiceNo: decodeURIComponent(segments[1]) }
+	}
+
+	if (segments[0] === "pay" && segments[1]) {
+		return { kind: "pay", invoiceNo: decodeURIComponent(segments[1]) }
+	}
+
+	if (pathname === "/success") {
+		return {
+			kind: "success",
+			invoiceNo: searchParams.get("invoice_no") || searchParams.get("invoiceNo") || "",
+		}
+	}
+
+	if (pathname === "/cancelled") {
+		return {
+			kind: "cancelled",
+			invoiceNo: searchParams.get("invoice_no") || searchParams.get("invoiceNo") || "",
+		}
+	}
+
+	return null
+}
+
 export default function App() {
 	const ref = useRef(null)
 
 	const [session, setSession] = useState(null)
 	const [authChecking, setAuthChecking] = useState(true)
 	const [isSaving, setIsSaving] = useState(false)
+	const [paymentActionBusy, setPaymentActionBusy] = useState(false)
+	const [routeState, setRouteState] = useState(() => getCurrentRoute())
+	const [paymentLinkMeta, setPaymentLinkMeta] = useState(() => {
+		const savedMeta = localStorage.getItem("inv_payment_meta")
+		if (!savedMeta) return null
+		try {
+			return JSON.parse(savedMeta)
+		} catch (error) {
+			console.error(error)
+			return null
+		}
+	})
 	
 	const [tab, setTab] = useState(() => {
 		const savedTab = localStorage.getItem("inv_current_tab")
@@ -92,12 +139,24 @@ export default function App() {
 		localStorage.setItem("inv_status", invoiceStatus)
 		localStorage.setItem("inv_data", JSON.stringify(invoiceData))
 		localStorage.setItem("inv_logo", logoSrc)
-	}, [tab, invoiceStatus, invoiceData, logoSrc])
+		if (paymentLinkMeta) {
+			localStorage.setItem("inv_payment_meta", JSON.stringify(paymentLinkMeta))
+		} else {
+			localStorage.removeItem("inv_payment_meta")
+		}
+	}, [tab, invoiceStatus, invoiceData, logoSrc, paymentLinkMeta])
+
+	useEffect(() => {
+		const syncRoute = () => setRouteState(getCurrentRoute())
+		syncRoute()
+		window.addEventListener("popstate", syncRoute)
+		return () => window.removeEventListener("popstate", syncRoute)
+	}, [])
 
 	// Warn before closing/reloading if invoice is unsaved
 	useEffect(() => {
 		const handleBeforeUnload = (e) => {
-			if (invoiceStatus === "unsaved" && tab === "create") {
+			if ((invoiceStatus === "unsaved" || invoiceStatus === "draft") && tab === "create") {
 				e.preventDefault()
 				e.returnValue = "" // required for Chrome
 			}
@@ -105,6 +164,10 @@ export default function App() {
 		window.addEventListener("beforeunload", handleBeforeUnload)
 		return () => window.removeEventListener("beforeunload", handleBeforeUnload)
 	}, [invoiceStatus, tab])
+
+	if (routeState?.kind) {
+		return <PublicInvoicePage mode={routeState.kind} invoiceNo={routeState.invoiceNo} />
+	}
 
 	const handleLogout = async () => {
 		if (supabase) {
@@ -172,6 +235,7 @@ export default function App() {
 		})
 		
 		setInvoiceStatus("unsaved")
+		setPaymentLinkMeta(null)
 		setTab("create")
 	}
 
@@ -180,13 +244,14 @@ export default function App() {
 			setTab("dashboard")
 			setInvoiceData(DEFAULT_INVOICE)
 			setInvoiceStatus("unsaved")
+			setPaymentLinkMeta(null)
 			localStorage.removeItem("inv_data")
 			localStorage.removeItem("inv_status")
 		}
 	}
 
 	const navigateToDashboard = () => {
-		if (tab !== "dashboard" && invoiceStatus === "unsaved") {
+		if (tab !== "dashboard" && (invoiceStatus === "unsaved" || invoiceStatus === "draft")) {
 			if (!window.confirm("Warning: Leaving without saving will result in lost progress. Continue to Dashboard?")) {
 				return
 			}
@@ -246,17 +311,121 @@ export default function App() {
 		if (err) {
 			alert("Error saving invoice: " + err.message)
 		} else {
-			setInvoiceStatus("saved")
+			setInvoiceStatus(status)
+			setPaymentLinkMeta(null)
 			if (status === "saved") {
 				setTab("preview")
 			}
 		}
 	}
 
-	const handleEditInvoice = (docData, status) => {
+	const handleEditInvoice = (docData, status, record = null) => {
 		setInvoiceData(docData)
-		setInvoiceStatus(status === "draft" ? "unsaved" : "saved")
+		setInvoiceStatus(status || "unsaved")
+		setPaymentLinkMeta(record ? {
+			invoiceNo: record.invoice_no,
+			status: record.status,
+			paymentPageUrl: record.payment_page_url || "",
+			checkoutUrl: record.payment_checkout_url || "",
+			stripeCheckoutSessionId: record.stripe_checkout_session_id || "",
+			paymentGeneratedAt: record.payment_generated_at || "",
+			paidAt: record.paid_at || "",
+		} : null)
 		setTab("create")
+	}
+
+	const handleGeneratePaymentLink = async () => {
+		if (!invoiceData.invoice.number.trim()) {
+			alert("Save the invoice number before generating a payment link.")
+			return
+		}
+
+		if (!(isFinalizedInvoice || invoiceStatus === "pending")) {
+			alert("Please save the invoice before generating a payment link.")
+			return
+		}
+
+		setPaymentActionBusy(true)
+		try {
+			const response = await fetch("/api/payments/create-session", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ invoiceNo: invoiceData.invoice.number }),
+			})
+
+			const result = await response.json().catch(() => ({}))
+			if (!response.ok) {
+				throw new Error(result.error || "Failed to generate the payment link.")
+			}
+
+			setInvoiceStatus("pending")
+			setPaymentLinkMeta({
+				invoiceNo: result.invoiceNo,
+				status: result.status,
+				paymentPageUrl: result.paymentPageUrl,
+				checkoutUrl: result.checkoutUrl,
+				stripeCheckoutSessionId: result.stripeCheckoutSessionId,
+			})
+		} catch (error) {
+			alert(error.message || "Failed to generate the payment link.")
+		} finally {
+			setPaymentActionBusy(false)
+		}
+	}
+
+	const handleCopyPaymentLink = async () => {
+		const link = paymentLinkMeta?.paymentPageUrl || ""
+		if (!link) {
+			alert("Generate a payment link first.")
+			return
+		}
+
+		try {
+			await navigator.clipboard.writeText(link)
+			alert("Payment link copied to clipboard.")
+		} catch (error) {
+			alert("Unable to copy the payment link.")
+		}
+	}
+
+	const handleSendPaymentLink = async () => {
+		if (!invoiceData.invoice.number.trim()) {
+			alert("Save the invoice number before sending a payment link.")
+			return
+		}
+
+		if (!(isFinalizedInvoice || invoiceStatus === "pending")) {
+			alert("Please save the invoice before sending a payment link.")
+			return
+		}
+
+		setPaymentActionBusy(true)
+		try {
+			const response = await fetch("/api/payments/send-link", {
+				method: "POST",
+				headers: { "Content-Type": "application/json" },
+				body: JSON.stringify({ invoiceNo: invoiceData.invoice.number }),
+			})
+
+			const result = await response.json().catch(() => ({}))
+			if (!response.ok) {
+				throw new Error(result.error || "Failed to send the payment link.")
+			}
+
+			setInvoiceStatus("pending")
+			setPaymentLinkMeta({
+				invoiceNo: result.invoiceNo,
+				status: "pending",
+				paymentPageUrl: result.paymentPageUrl,
+				checkoutUrl: result.checkoutUrl || paymentLinkMeta?.checkoutUrl || "",
+				stripeCheckoutSessionId: result.stripeCheckoutSessionId || paymentLinkMeta?.stripeCheckoutSessionId || "",
+			})
+			alert("Payment link sent.")
+		} catch (error) {
+			alert(error.message || "Failed to send the payment link.")
+		} finally {
+			setPaymentActionBusy(false)
+		}
 	}
 
 	const handleLogo = (event) => {
@@ -269,6 +438,27 @@ export default function App() {
 	}
 
 	const isActionDisabled = !ref.current
+	const isFinalizedInvoice = FINAL_INVOICE_STATUSES.has(invoiceStatus)
+	const paymentPageUrl = paymentLinkMeta?.paymentPageUrl || (
+		typeof window !== "undefined" && invoiceData.invoice.number && (invoiceStatus === "pending" || isFinalizedInvoice)
+			? `${window.location.origin}/pay/${encodeURIComponent(invoiceData.invoice.number)}`
+			: ""
+	)
+	const canGeneratePaymentLink = !paymentActionBusy && ["saved", "pending", "failed", "cancelled"].includes(invoiceStatus)
+	const canCopyPaymentLink = Boolean(paymentPageUrl)
+
+	const renderExportMenu = (styleOverrides = {}) => (
+		<div className="export-dropdown-menu" style={styleOverrides}>
+			<button disabled={isActionDisabled} onClick={() => { downloadPDF(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download PDF</button>
+			<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download JPG</button>
+			<button disabled={isActionDisabled} onClick={() => { printInvoice(ref.current); setIsExportOpen(false) }}>Print</button>
+			<div className="export-divider" />
+			<button disabled={!canGeneratePaymentLink} onClick={() => { handleGeneratePaymentLink(); setIsExportOpen(false) }}>Generate Payment Link</button>
+			<button disabled={!canCopyPaymentLink} onClick={() => { handleCopyPaymentLink(); setIsExportOpen(false) }}>Copy Payment Link</button>
+			<button disabled={!canGeneratePaymentLink} onClick={() => { handleSendPaymentLink(); setIsExportOpen(false) }}>Send Payment Link</button>
+			{paymentPageUrl && <div className="export-link-hint">{paymentPageUrl}</div>}
+		</div>
+	)
 
 	if (authChecking) {
 		return <div className="app-shell" style={{ display: "flex", justifyContent: "center", alignItems: "center" }}><p>Loading...</p></div>
@@ -318,7 +508,7 @@ export default function App() {
 								className={`tab-btn ${tab === "create" ? "active" : ""}`} 
 								onClick={() => setTab("create")}
 							>
-								{invoiceStatus === "saved" ? "Edit Invoice" : "Create New"}
+								{isFinalizedInvoice ? "Edit Invoice" : "Create New"}
 							</button>
 							
 							<button 
@@ -329,7 +519,7 @@ export default function App() {
 								Preview
 							</button>
 							
-							{invoiceStatus !== "saved" ? (
+							{!isFinalizedInvoice ? (
 								<>
 									<button type="button" className="action-btn" onClick={() => handleSave("draft")} disabled={isSaving}>
 										Save as Draft
@@ -353,13 +543,7 @@ export default function App() {
 											Export
 											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
 										</button>
-										{isExportOpen && (
-											<div className="export-dropdown-menu">
-												<button disabled={isActionDisabled} onClick={() => { downloadPDF(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download PDF</button>
-												<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download JPG</button>
-												<button disabled={isActionDisabled} onClick={() => { printInvoice(ref.current); setIsExportOpen(false) }}>Print</button>
-											</div>
-										)}
+										{isExportOpen && renderExportMenu()}
 									</div>
 									<button type="button" className="action-btn" onClick={handleCreateNew}>
 										+ Create New
@@ -386,12 +570,15 @@ export default function App() {
 								data={invoiceData}
 								setData={(newData) => {
 									setInvoiceData(newData)
-									if (invoiceStatus === "saved") setInvoiceStatus("unsaved")
+									if (invoiceStatus !== "unsaved") {
+										setInvoiceStatus("unsaved")
+										setPaymentLinkMeta(null)
+									}
 								}}
 							/>
 
 							<div className="editor-actions-bottom" style={{ marginTop: '24px', display: 'flex', gap: '12px', flexWrap: 'wrap' }}>
-								{invoiceStatus !== "saved" ? (
+								{!isFinalizedInvoice ? (
 									<>
 										<button type="button" className="action-btn" onClick={() => handleSave("draft")} disabled={isSaving} style={{ flex: 1, minWidth: '120px' }}>
 											Save as Draft
@@ -414,13 +601,7 @@ export default function App() {
 											Export
 											<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"></polyline></svg>
 										</button>
-										{isExportOpen && (
-											<div className="export-dropdown-menu" style={{ bottom: '100%', top: 'auto', marginBottom: '8px', minWidth: '200px' }}>
-												<button disabled={isActionDisabled} onClick={() => { downloadPDF(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download PDF</button>
-												<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download JPG</button>
-												<button disabled={isActionDisabled} onClick={() => { printInvoice(ref.current); setIsExportOpen(false) }}>Print</button>
-											</div>
-										)}
+										{isExportOpen && renderExportMenu({ bottom: '100%', top: 'auto', marginBottom: '8px', minWidth: '240px' })}
 									</div>
 								)}
 							</div>

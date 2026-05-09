@@ -4,5 +4,23 @@
       "path": "/api/keep-alive",
       "schedule": "0 0 * * 1,4"
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/invoice/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/pay/:path*",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/success",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/cancelled",
+      "destination": "/index.html"
+    }
   ]
 }

@@ -37,15 +37,35 @@ CREATE TABLE IF NOT EXISTS public.invoices (
     invoice_no TEXT NOT NULL UNIQUE, -- Unique invoice number for management
     customer TEXT NOT NULL,
     total DECIMAL(10, 2) NOT NULL,
-    status TEXT NOT NULL DEFAULT 'saved' CHECK (status IN ('draft', 'saved')),
+    status TEXT NOT NULL DEFAULT 'saved' CHECK (status IN ('draft', 'saved', 'pending', 'paid', 'failed', 'cancelled')),
+    payment_page_url TEXT,
+    payment_checkout_url TEXT,
+    stripe_checkout_session_id TEXT,
+    stripe_payment_intent_id TEXT,
+    payment_generated_at TIMESTAMP WITH TIME ZONE,
+    payment_link_sent_at TIMESTAMP WITH TIME ZONE,
+    paid_at TIMESTAMP WITH TIME ZONE,
+    payment_success_email_sent_at TIMESTAMP WITH TIME ZONE,
+    payment_failure_email_sent_at TIMESTAMP WITH TIME ZONE,
+    payment_error TEXT,
     data JSONB NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
 -- Note: If you already ran the previous schema.sql, you'll need to run these ALTER commands instead of CREATE TABLE:
--- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'saved' CHECK (status IN ('draft', 'saved'));
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS status TEXT NOT NULL DEFAULT 'saved' CHECK (status IN ('draft', 'saved', 'pending', 'paid', 'failed', 'cancelled'));
 -- ALTER TABLE public.invoices ADD CONSTRAINT invoices_invoice_no_key UNIQUE (invoice_no);
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS payment_page_url TEXT;
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS payment_checkout_url TEXT;
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS stripe_checkout_session_id TEXT;
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS stripe_payment_intent_id TEXT;
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS payment_generated_at TIMESTAMP WITH TIME ZONE;
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS payment_link_sent_at TIMESTAMP WITH TIME ZONE;
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS paid_at TIMESTAMP WITH TIME ZONE;
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS payment_success_email_sent_at TIMESTAMP WITH TIME ZONE;
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS payment_failure_email_sent_at TIMESTAMP WITH TIME ZONE;
+-- ALTER TABLE public.invoices ADD COLUMN IF NOT EXISTS payment_error TEXT;
 
 -- Enable RLS for invoices
 ALTER TABLE public.invoices ENABLE ROW LEVEL SECURITY;
