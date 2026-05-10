@@ -1,5 +1,7 @@
 import crypto from "crypto"
 import { jsPDF } from "jspdf"
+import puppeteer from "puppeteer-core"
+import chromium from "@sparticuz/chromium"
 import { createClient } from "@supabase/supabase-js"
 
 export function getEnv(...names) {
@@ -69,6 +71,21 @@ export function escapeHtml(value) {
 export function formatCurrency(value) {
   const amount = Number(value || 0)
   return `£${amount.toFixed(2)}`
+}
+
+function buildInvoicePdfFilename(invoice) {
+  const statusSlug = String(invoice?.status || "invoice").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+  const invoiceSlug = String(invoice?.invoice_no || "document").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "")
+  return `invoice-${statusSlug}-${invoiceSlug}.pdf`
+}
+
+async function launchBrowser() {
+  return puppeteer.launch({
+    args: chromium.args,
+    defaultViewport: { width: 1024, height: 2200, deviceScaleFactor: 2 },
+    executablePath: await chromium.executablePath(),
+    headless: chromium.headless,
+  })
 }
 
 export function getStripeMinimumAmount() {
@@ -307,9 +324,47 @@ async function buildInvoicePdfBase64(invoice, company) {
 
 async function buildInvoicePdfAttachment(invoice, company) {
   return {
-    filename: `invoice-${String(invoice?.status || "invoice").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}-${String(invoice?.invoice_no || "document").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "")}.pdf`,
+    filename: buildInvoicePdfFilename(invoice),
     content: await buildInvoicePdfBase64(invoice, company),
   }
+}
+
+async function buildExactInvoicePdfAttachment({ baseUrl, invoice, company }) {
+  if (baseUrl && invoice?.invoice_no) {
+    let browser
+    try {
+      browser = await launchBrowser()
+      const page = await browser.newPage()
+      const invoiceUrl = `${baseUrl}/invoice/${encodeURIComponent(invoice.invoice_no)}`
+
+      await page.goto(invoiceUrl, { waitUntil: "networkidle2", timeout: 45000 })
+      await page.waitForSelector(".invoice-preview", { timeout: 45000 })
+      await page.waitForFunction(() => Array.from(document.images || []).every((img) => img.complete), { timeout: 45000 })
+
+      const invoiceElement = await page.$(".invoice-preview")
+      if (invoiceElement) {
+        await invoiceElement.evaluate((element) => {
+          element.style.width = "800px"
+          element.style.maxWidth = "none"
+        })
+        const imageBuffer = await invoiceElement.screenshot({ type: "png" })
+        const pdf = new jsPDF()
+        pdf.addImage(`data:image/png;base64,${Buffer.from(imageBuffer).toString("base64")}`, "PNG", 0, 0, 210, 297)
+        return {
+          filename: buildInvoicePdfFilename(invoice),
+          content: Buffer.from(pdf.output("arraybuffer")).toString("base64"),
+        }
+      }
+    } catch {
+      // Fall back to the server-side invoice renderer below.
+    } finally {
+      if (browser) {
+        await browser.close().catch(() => {})
+      }
+    }
+  }
+
+  return buildInvoicePdfAttachment(invoice, company)
 }
 
 export function buildStripeLineItems(invoiceData = {}) {
@@ -634,7 +689,7 @@ function buildInvoiceNotificationEmail({ invoice, company, baseUrl, paymentPageU
 }
 
 export async function sendInvoiceEmailNotifications({ invoice, company, baseUrl, paymentPageUrl, status, adminEmail }) {
-  const attachment = await buildInvoicePdfAttachment(invoice, company)
+  const attachment = await buildExactInvoicePdfAttachment({ baseUrl, invoice, company })
   const customerEmail = invoice.data?.billTo?.email || invoice.customer_email || ""
   const sendTasks = []
 
