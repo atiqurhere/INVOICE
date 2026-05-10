@@ -1163,6 +1163,38 @@ textarea.field-input {
   border-top: 1px solid #e2e8f0;
 }
 
+.export-link-hint-warning {
+  color: #92400e;
+  background: #fffbeb;
+}
+
+.payment-status-banner {
+  margin: 0 0 16px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  border: 1px solid transparent;
+}
+
+.payment-status-banner.warning {
+  background: #fffbeb;
+  border-color: #fcd34d;
+  color: #92400e;
+}
+
+.payment-status-banner.error {
+  background: #fef2f2;
+  border-color: #fecaca;
+  color: #991b1b;
+}
+
+.payment-status-banner.success {
+  background: #ecfdf5;
+  border-color: #a7f3d0;
+  color: #065f46;
+}
+
 .public-page-shell {
   min-height: 100vh;
   background:

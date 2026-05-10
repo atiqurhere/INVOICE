@@ -12,6 +12,20 @@ import { downloadPDF, downloadJPG, printInvoice } from "./utils/exportPDF"
 import { generateInvoiceNumber } from "./utils/invoiceNumber"
 
 const TEAL = "#2a7f8e"
+const STRIPE_CHECKOUT_MINIMUM = 0.3
+
+const formatGBP = (value) => `£${Number(value || 0).toFixed(2)}`
+
+const calculateInvoiceTotals = (invoiceData = {}) => {
+	const items = Array.isArray(invoiceData.items) ? invoiceData.items : []
+	const subtotal = items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.price) || 0), 0)
+	const delivery = Number(invoiceData.totals?.delivery) || 0
+	const tax = Number(invoiceData.totals?.tax) || 0
+	const total = subtotal + delivery + tax
+	const due = Number(invoiceData.totals?.due) > 0 ? Number(invoiceData.totals.due) : total
+
+	return { subtotal, delivery, tax, total, due }
+}
 
 const DEFAULT_INVOICE = {
 	company: {
@@ -81,6 +95,7 @@ export default function App() {
 	const [authChecking, setAuthChecking] = useState(true)
 	const [isSaving, setIsSaving] = useState(false)
 	const [paymentActionBusy, setPaymentActionBusy] = useState(false)
+	const [paymentFeedback, setPaymentFeedback] = useState(null)
 	const [routeState, setRouteState] = useState(() => getCurrentRoute())
 	const [paymentLinkMeta, setPaymentLinkMeta] = useState(() => {
 		const savedMeta = localStorage.getItem("inv_payment_meta")
@@ -229,6 +244,7 @@ export default function App() {
 		}
 		
 		setLogoSrc(logo)
+		setPaymentFeedback(null)
 		setInvoiceData({
 			...DEFAULT_INVOICE,
 			company: companyData,
@@ -247,6 +263,7 @@ export default function App() {
 			setInvoiceData(DEFAULT_INVOICE)
 			setInvoiceStatus("unsaved")
 			setPaymentLinkMeta(null)
+			setPaymentFeedback(null)
 			localStorage.removeItem("inv_data")
 			localStorage.removeItem("inv_status")
 		}
@@ -295,6 +312,7 @@ export default function App() {
 			customer: invoiceData.billTo.name || "Unknown",
 			total: total,
 			status: effectiveStatus,
+			payment_error: null,
 			data: invoiceData
 		}
 
@@ -317,6 +335,7 @@ export default function App() {
 		} else {
 			setInvoiceStatus(effectiveStatus)
 			setPaymentLinkMeta(null)
+			setPaymentFeedback(null)
 			if (effectiveStatus === "saved") {
 				setTab("preview")
 			}
@@ -327,6 +346,7 @@ export default function App() {
 		const nextStatus = status || docData?.status || "saved"
 		setInvoiceData({ ...docData, status: nextStatus })
 		setInvoiceStatus(nextStatus)
+		setPaymentFeedback(record?.payment_error ? { type: "error", message: record.payment_error } : null)
 		setPaymentLinkMeta(record ? {
 			invoiceNo: record.invoice_no,
 			status: record.status,
@@ -350,6 +370,7 @@ export default function App() {
 			return
 		}
 
+		setPaymentFeedback(null)
 		setPaymentActionBusy(true)
 		try {
 			const response = await fetch("/api/payments/create-session", {
@@ -364,6 +385,7 @@ export default function App() {
 			}
 
 			setInvoiceStatus("pending")
+			setPaymentFeedback(null)
 			setPaymentLinkMeta({
 				invoiceNo: result.invoiceNo,
 				status: result.status,
@@ -373,7 +395,7 @@ export default function App() {
 			})
 			setInvoiceData((prev) => ({ ...prev, status: "pending" }))
 		} catch (error) {
-			alert(error.message || "Failed to generate the payment link.")
+			setPaymentFeedback({ type: "error", message: error.message || "Failed to generate the payment link." })
 		} finally {
 			setPaymentActionBusy(false)
 		}
@@ -405,6 +427,7 @@ export default function App() {
 			return
 		}
 
+		setPaymentFeedback(null)
 		setPaymentActionBusy(true)
 		try {
 			const response = await fetch("/api/payments/send-link", {
@@ -419,6 +442,7 @@ export default function App() {
 			}
 
 			setInvoiceStatus("pending")
+			setPaymentFeedback(null)
 			setPaymentLinkMeta({
 				invoiceNo: result.invoiceNo,
 				status: "pending",
@@ -428,7 +452,7 @@ export default function App() {
 			})
 			alert("Payment link sent.")
 		} catch (error) {
-			alert(error.message || "Failed to send the payment link.")
+			setPaymentFeedback({ type: "error", message: error.message || "Failed to send the payment link." })
 		} finally {
 			setPaymentActionBusy(false)
 		}
@@ -445,11 +469,17 @@ export default function App() {
 
 	const isActionDisabled = !ref.current
 	const isFinalizedInvoice = FINAL_INVOICE_STATUSES.has(invoiceStatus)
+	const invoiceTotals = calculateInvoiceTotals(invoiceData)
+	const paymentChargeTotal = invoiceTotals.total
+	const paymentBelowStripeMinimum = paymentChargeTotal > 0 && paymentChargeTotal < STRIPE_CHECKOUT_MINIMUM
 	const paymentPageUrl = paymentLinkMeta?.paymentPageUrl || ""
 	const hasGeneratedPaymentLink = Boolean(paymentLinkMeta?.paymentPageUrl)
-	const canGeneratePaymentLink = !paymentActionBusy && !hasGeneratedPaymentLink && ["saved", "pending", "failed", "cancelled"].includes(invoiceStatus)
+	const canGeneratePaymentLink = !paymentActionBusy && !hasGeneratedPaymentLink && ["saved", "pending", "failed", "cancelled"].includes(invoiceStatus) && !paymentBelowStripeMinimum
 	const canCopyPaymentLink = hasGeneratedPaymentLink
-	const canSendPaymentLink = hasGeneratedPaymentLink
+	const canSendPaymentLink = hasGeneratedPaymentLink && !paymentActionBusy
+	const paymentBannerMessage = paymentFeedback?.message || (paymentBelowStripeMinimum && ["saved", "pending", "failed", "cancelled"].includes(invoiceStatus)
+		? `Stripe Checkout requires at least ${formatGBP(STRIPE_CHECKOUT_MINIMUM)} for card payments. This invoice total is ${formatGBP(paymentChargeTotal)}.`
+		: "")
 
 	const renderExportMenu = (styleOverrides = {}) => (
 		<div className="export-dropdown-menu" style={styleOverrides}>
@@ -457,6 +487,7 @@ export default function App() {
 			<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download JPG</button>
 			<button disabled={isActionDisabled} onClick={() => { printInvoice(ref.current); setIsExportOpen(false) }}>Print</button>
 			<div className="export-divider" />
+			{paymentBannerMessage && !hasGeneratedPaymentLink ? <div className="export-link-hint export-link-hint-warning">{paymentBannerMessage}</div> : null}
 			{!hasGeneratedPaymentLink ? (
 				<button disabled={!canGeneratePaymentLink} onClick={() => { handleGeneratePaymentLink(); setIsExportOpen(false) }}>Generate Payment Link</button>
 			) : (
@@ -572,6 +603,11 @@ export default function App() {
 				{tab === "create" && (
 					<div className="edit-layout">
 						<div>
+							{tab === "create" && paymentBannerMessage ? (
+								<div className={`payment-status-banner ${paymentFeedback?.type || (paymentBelowStripeMinimum ? "warning" : "")}`} role="status" aria-live="polite">
+									{paymentBannerMessage}
+								</div>
+							) : null}
 							{/* In Create/Edit mode, mark invoice as unsaved when data changes */}
 							<InvoiceEditor
 								logoSrc={logoSrc}
@@ -587,6 +623,7 @@ export default function App() {
 									if (invoiceStatus !== "unsaved") {
 										setInvoiceStatus("unsaved")
 										setPaymentLinkMeta(null)
+										setPaymentFeedback(null)
 									}
 								}}
 							/>

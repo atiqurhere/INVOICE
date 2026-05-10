@@ -70,6 +70,36 @@ export function formatCurrency(value) {
   return `£${amount.toFixed(2)}`
 }
 
+export function getStripeMinimumAmount() {
+  return 0.3
+}
+
+export function createStripeMinimumAmountError(total) {
+  const minimum = getStripeMinimumAmount()
+  const error = new Error(`Stripe Checkout requires a minimum payment of ${formatCurrency(minimum)} for card payments. This invoice total is ${formatCurrency(total)}.`)
+  error.code = "STRIPE_MINIMUM_AMOUNT"
+  error.statusCode = 400
+  error.minimumAmount = minimum
+  error.totalAmount = Number(total || 0)
+  return error
+}
+
+export function validateStripeCheckoutAmount(total) {
+  const amount = Number(total || 0)
+  const minimum = getStripeMinimumAmount()
+
+  if (amount <= 0) {
+    const error = new Error("Invoice total must be greater than zero before creating a payment link.")
+    error.statusCode = 400
+    error.code = "INVALID_INVOICE_TOTAL"
+    throw error
+  }
+
+  if (amount < minimum) {
+    throw createStripeMinimumAmountError(amount)
+  }
+}
+
 export function buildInvoiceTotals(invoiceData = {}) {
   const items = Array.isArray(invoiceData.items) ? invoiceData.items : []
   const subtotal = items.reduce((sum, item) => sum + (Number(item.qty) || 0) * (Number(item.price) || 0), 0)
@@ -144,9 +174,7 @@ export async function createStripeCheckoutSession({ invoice, baseUrl }) {
   const lineItems = buildStripeLineItems(invoice.data || {})
   const totals = buildInvoiceTotals(invoice.data || {})
 
-  if (totals.total <= 0) {
-    throw new Error("Invoice total must be greater than zero before creating a payment link.")
-  }
+  validateStripeCheckoutAmount(totals.total)
 
   const body = new URLSearchParams()
   body.set("mode", "payment")

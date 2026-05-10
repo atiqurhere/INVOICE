@@ -53,7 +53,26 @@ export default async function handler(req, res) {
   let sessionId = invoice.stripe_checkout_session_id
 
   if (!checkoutUrl || invoice.status !== "pending") {
-    const session = await createStripeCheckoutSession({ invoice, baseUrl })
+    let session
+
+    try {
+      session = await createStripeCheckoutSession({ invoice, baseUrl })
+    } catch (error) {
+      const now = new Date().toISOString()
+      await supabase
+        .from("invoices")
+        .update({
+          payment_error: error.message || "Failed to create Stripe checkout session.",
+          updated_at: now,
+        })
+        .eq("id", invoice.id)
+
+      return res.status(error.statusCode || (error.code === "STRIPE_MINIMUM_AMOUNT" || error.code === "INVALID_INVOICE_TOTAL" ? 400 : 500)).json({
+        error: error.message || "Failed to create Stripe checkout session.",
+        code: error.code || "STRIPE_CHECKOUT_FAILED",
+      })
+    }
+
     checkoutUrl = session.url
     sessionId = session.id
 
