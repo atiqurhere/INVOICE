@@ -1,6 +1,7 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import InvoicePreview from "./InvoicePreview"
 import defaultLogo from "../logo/logo.png"
+import { downloadPDF } from "../utils/exportPDF"
 
 const MODE_COPY = {
   invoice: {
@@ -31,6 +32,7 @@ const formatMoney = (value) => {
 }
 
 export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
+  const previewRef = useRef(null)
   const [invoicePayload, setInvoicePayload] = useState(null)
   const [loading, setLoading] = useState(true)
   const [redirecting, setRedirecting] = useState(mode === "pay")
@@ -197,6 +199,12 @@ export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
     }
   }
 
+  const downloadInvoice = async () => {
+    if (!previewRef.current) return
+
+    await downloadPDF(previewRef.current, invoice?.invoice_no || invoiceNo || "invoice")
+  }
+
   return (
     <div className="public-page-shell">
       <div className="public-page-hero">
@@ -242,6 +250,12 @@ export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
             </div>
 
             <div className="public-actions">
+              {mode !== "pay" && invoice && (
+                <button type="button" className="action-btn" onClick={downloadInvoice}>
+                  Download Invoice
+                </button>
+              )}
+
               {showPaymentActions && (
                 <button type="button" className="action-btn" onClick={openPayment}>
                   Pay Now
@@ -273,7 +287,7 @@ export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
             </div>
 
             <div className="public-preview-card">
-              <InvoicePreview invoiceData={invoice.data} logoSrc={logoSrc} />
+              <InvoicePreview ref={previewRef} invoiceData={invoice.data} logoSrc={logoSrc} />
             </div>
           </>
         )}
