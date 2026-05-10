@@ -37,6 +37,30 @@ export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
   const [error, setError] = useState("")
 
   useEffect(() => {
+    if (typeof document === "undefined") return
+
+    const titleParts = ["Print Your Vibe"]
+
+    if (mode === "pay") {
+      titleParts.push("Secure Payment")
+    } else if (mode === "success") {
+      titleParts.push("Payment Confirmed")
+    } else if (mode === "cancelled") {
+      titleParts.push("Payment Update")
+    } else if (invoiceNo) {
+      titleParts.push(`Invoice ${invoiceNo}`)
+    } else {
+      titleParts.push("Invoice")
+    }
+
+    document.title = titleParts.join(" | ")
+
+    return () => {
+      document.title = "Print Your Vibe | Invoices"
+    }
+  }, [mode, invoiceNo])
+
+  useEffect(() => {
     let active = true
 
     const fetchInvoice = async () => {
