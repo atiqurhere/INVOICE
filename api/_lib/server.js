@@ -127,13 +127,46 @@ function normalizeInvoiceStatusLabel(status) {
   }[status] || "Invoice Update"
 }
 
-function buildInvoicePdfBase64(invoice, company) {
+function getStatusSealColor(status) {
+  return {
+    paid: { fill: [22, 101, 52], stroke: [22, 101, 52] },
+    pending: { fill: [29, 78, 216], stroke: [29, 78, 216] },
+    failed: { fill: [185, 28, 28], stroke: [185, 28, 28] },
+    cancelled: { fill: [100, 116, 139], stroke: [100, 116, 139] },
+  }[status] || { fill: [42, 127, 142], stroke: [42, 127, 142] }
+}
+
+async function loadImageDataUrl(url) {
+  if (!url) return ""
+  if (url.startsWith("data:")) return url
+
+  try {
+    const response = await fetch(url)
+    if (!response.ok) return ""
+
+    const contentType = response.headers.get("content-type") || "image/png"
+    const arrayBuffer = await response.arrayBuffer()
+    const base64 = Buffer.from(arrayBuffer).toString("base64")
+    return `data:${contentType};base64,${base64}`
+  } catch {
+    return ""
+  }
+}
+
+async function buildInvoicePdfBase64(invoice, company) {
   const pdf = new jsPDF({ unit: "pt", format: "a4" })
   const pageWidth = pdf.internal.pageSize.getWidth()
   const pageHeight = pdf.internal.pageSize.getHeight()
   const margin = 40
   const contentWidth = pageWidth - margin * 2
   let y = margin
+  const invoiceData = invoice?.data || {}
+  const items = Array.isArray(invoiceData.items) ? invoiceData.items : []
+  const totals = buildInvoiceTotals(invoiceData)
+  const invoiceStatus = normalizeInvoiceStatusLabel(invoice?.status)
+  const seal = getStatusSealColor(invoice?.status)
+  const logoUrl = company?.logo_url || invoiceData?.company?.logo_url || ""
+  const logoDataUrl = await loadImageDataUrl(logoUrl)
 
   const ensureSpace = (needed = 24) => {
     if (y + needed > pageHeight - margin) {
@@ -152,80 +185,170 @@ function buildInvoicePdfBase64(invoice, company) {
     y += Math.max(18, wrapped.length * 14)
   }
 
-  const invoiceData = invoice?.data || {}
-  const items = Array.isArray(invoiceData.items) ? invoiceData.items : []
-  const totals = buildInvoiceTotals(invoiceData)
-  const invoiceStatus = normalizeInvoiceStatusLabel(invoice?.status)
+  const drawHeader = () => {
+    pdf.setFillColor(15, 118, 110)
+    pdf.rect(0, 0, pageWidth, 18, "F")
 
-  pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(20)
-  pdf.text(company?.company_name || "Invoice Generator", margin, y)
-  y += 18
+    if (logoDataUrl) {
+      try {
+        pdf.addImage(logoDataUrl, "PNG", margin, 34, 120, 48)
+      } catch {
+        // If the logo cannot be embedded, continue with the text-only header.
+      }
+    }
 
-  pdf.setFont("helvetica", "normal")
-  pdf.setFontSize(11)
-  if (company?.address) {
-    const addressLines = pdf.splitTextToSize(company.address, contentWidth)
-    pdf.text(addressLines, margin, y)
-    y += addressLines.length * 13
+    pdf.setFont("helvetica", "bold")
+    pdf.setFontSize(20)
+    pdf.text(company?.company_name || invoiceData?.company?.name || "Invoice Generator", margin, 96)
+
+    pdf.setFont("helvetica", "normal")
+    pdf.setFontSize(10)
+    const companyLines = [company?.phone || invoiceData?.company?.phone, company?.address || invoiceData?.company?.address, company?.email || invoiceData?.company?.email].filter(Boolean)
+    companyLines.forEach((line, index) => {
+      pdf.text(String(line), margin, 114 + (index * 12))
+    })
+
+    const sealX = pageWidth - margin - 144
+    const sealY = 34
+    pdf.setFillColor(...seal.fill)
+    pdf.setDrawColor(...seal.stroke)
+    pdf.roundedRect(sealX, sealY, 144, 72, 10, 10, "FD")
+    pdf.setTextColor(255, 255, 255)
+    pdf.setFont("helvetica", "bold")
+    pdf.setFontSize(10)
+    pdf.text("STATUS SEAL", sealX + 18, sealY + 20)
+    pdf.setFontSize(20)
+    pdf.text(invoiceStatus.toUpperCase(), sealX + 18, sealY + 46)
+    pdf.setTextColor(0, 0, 0)
   }
-  if (company?.email) {
-    pdf.text(company.email, margin, y)
-    y += 14
-  }
-  y += 8
 
-  pdf.setDrawColor(42, 127, 142)
-  pdf.setLineWidth(1.5)
+  drawHeader()
+
+  y = 154
+  pdf.setDrawColor(226, 232, 240)
+  pdf.setLineWidth(1)
   pdf.line(margin, y, pageWidth - margin, y)
   y += 18
 
   pdf.setFont("helvetica", "bold")
   pdf.setFontSize(16)
   pdf.text(`Invoice ${invoice?.invoice_no || ""}`, margin, y)
-  y += 22
+  y += 20
 
-  pdf.setFontSize(11)
-  writeLine("Status", invoiceStatus)
-  writeLine("Customer", invoice?.customer || invoiceData?.billTo?.name || "")
-  writeLine("Email", invoiceData?.billTo?.email || invoice?.customer_email || "")
-  writeLine("Total", formatPdfCurrency(invoice?.total || totals.total))
-  y += 8
+  const issued = invoiceData?.invoice?.issued || ""
+  const delivery = invoiceData?.invoice?.delivery || ""
+  const statusLine = `${invoiceStatus}${invoice?.paid_at ? ` on ${new Date(invoice.paid_at).toLocaleDateString()}` : ""}`
 
-  pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(13)
-  pdf.text("Items", margin, y)
-  y += 14
-
+  pdf.setFillColor(248, 250, 252)
+  pdf.setDrawColor(226, 232, 240)
+  pdf.roundedRect(margin, y, contentWidth, 84, 10, 10, "FD")
   pdf.setFontSize(10)
+  writeLine("Issued", issued, 90)
+  writeLine("Delivery", delivery, 90)
+  writeLine("Status", statusLine, 90)
+  writeLine("Customer", invoice?.customer || invoiceData?.billTo?.name || "", 90)
+  writeLine("Email", invoiceData?.billTo?.email || invoice?.customer_email || "", 90)
+  writeLine("Total", formatPdfCurrency(invoice?.total || totals.total), 90)
+
+  y += 12
+
+  const tableX = margin
+  const tableWidth = contentWidth
+  const colDesc = 240
+  const colQty = 60
+  const colPrice = 100
+  const colTotal = tableWidth - colDesc - colQty - colPrice
+
+  const drawTableRow = (cells, isHeader = false) => {
+    const rowHeight = isHeader ? 24 : 34
+    ensureSpace(rowHeight + 6)
+    if (isHeader) {
+      pdf.setFillColor(42, 127, 142)
+      pdf.setTextColor(255, 255, 255)
+    } else {
+      pdf.setFillColor(255, 255, 255)
+      pdf.setTextColor(15, 23, 42)
+    }
+    pdf.setDrawColor(226, 232, 240)
+    pdf.rect(tableX, y, tableWidth, rowHeight, "FD")
+
+    const positions = [tableX + 8, tableX + 8 + colDesc, tableX + 8 + colDesc + colQty, tableX + 8 + colDesc + colQty + colPrice]
+    const widths = [colDesc - 16, colQty - 16, colPrice - 16, colTotal - 16]
+
+    pdf.setFont("helvetica", isHeader ? "bold" : "normal")
+    pdf.setFontSize(isHeader ? 10 : 9)
+    cells.forEach((cell, index) => {
+      const lines = pdf.splitTextToSize(String(cell ?? ""), widths[index])
+      pdf.text(lines, positions[index], y + (isHeader ? 16 : 14))
+    })
+    pdf.setTextColor(0, 0, 0)
+    y += rowHeight
+  }
+
+  drawTableRow(["Description", "Qty", "Price", "Line Total"], true)
   items.forEach((item, index) => {
     const description = String(item?.description || `Item ${index + 1}`)
     const quantity = Number(item?.qty) || 0
     const price = Number(item?.price) || 0
     const lineTotal = quantity * price
-    const rowText = `${index + 1}. ${description}  x${quantity}  ${formatPdfCurrency(price)}  ${formatPdfCurrency(lineTotal)}`
-    const wrapped = pdf.splitTextToSize(rowText, contentWidth)
-    ensureSpace(wrapped.length * 14 + 4)
-    pdf.text(wrapped, margin, y)
-    y += wrapped.length * 14 + 4
+    drawTableRow([description, String(quantity), formatPdfCurrency(price), formatPdfCurrency(lineTotal)])
   })
 
-  y += 8
+  y += 14
+
+  const summaryX = pageWidth - margin - 220
+  const summaryW = 220
+  const summaryLine = (label, value, fill = false) => {
+    ensureSpace(22)
+    if (fill) {
+      pdf.setFillColor(248, 250, 252)
+      pdf.rect(summaryX, y, summaryW, 22, "F")
+    }
+    pdf.setFont("helvetica", label === "Amount Due" ? "bold" : "normal")
+    pdf.setFontSize(label === "Amount Due" ? 11 : 10)
+    pdf.text(label, summaryX + 10, y + 15)
+    pdf.text(String(value), summaryX + 200, y + 15, { align: "right" })
+    y += 22
+  }
+
+  summaryLine("Subtotal", formatPdfCurrency(totals.subtotal), true)
+  summaryLine("Delivery", formatPdfCurrency(totals.delivery))
+  summaryLine("Tax", formatPdfCurrency(totals.tax), true)
+  summaryLine("Amount Due", formatPdfCurrency(totals.due), true)
+
+  y += 10
+
+  const terms = Array.isArray(invoiceData?.terms) ? invoiceData.terms : []
+  if (terms.length > 0) {
+    ensureSpace(48)
+    pdf.setFont("helvetica", "bold")
+    pdf.setFontSize(12)
+    pdf.text("Terms & Conditions", margin, y)
+    y += 16
+    pdf.setFont("helvetica", "normal")
+    pdf.setFontSize(9)
+    terms.forEach((term) => {
+      const wrapped = pdf.splitTextToSize(String(term), contentWidth)
+      ensureSpace(wrapped.length * 12 + 4)
+      pdf.text(wrapped, margin, y)
+      y += wrapped.length * 12 + 4
+    })
+  }
+
+  const thankYou = invoiceData?.thankYou || "Thank you for your purchase with us"
+  ensureSpace(30)
   pdf.setFont("helvetica", "bold")
-  pdf.setFontSize(12)
-  writeLine("Subtotal", formatPdfCurrency(totals.subtotal))
-  writeLine("Delivery", formatPdfCurrency(totals.delivery))
-  writeLine("Tax", formatPdfCurrency(totals.tax))
-  writeLine("Amount Due", formatPdfCurrency(totals.due))
+  pdf.setFontSize(11)
+  pdf.text(thankYou, margin, y)
 
   const arrayBuffer = pdf.output("arraybuffer")
   return Buffer.from(arrayBuffer).toString("base64")
 }
 
-function buildInvoicePdfAttachment(invoice, company) {
+async function buildInvoicePdfAttachment(invoice, company) {
   return {
     filename: `invoice-${invoice?.invoice_no || "document"}.pdf`,
-    content: buildInvoicePdfBase64(invoice, company),
+    content: await buildInvoicePdfBase64(invoice, company),
   }
 }
 
@@ -551,7 +674,7 @@ function buildInvoiceNotificationEmail({ invoice, company, baseUrl, paymentPageU
 }
 
 export async function sendInvoiceEmailNotifications({ invoice, company, baseUrl, paymentPageUrl, status, adminEmail }) {
-  const attachment = buildInvoicePdfAttachment(invoice, company)
+  const attachment = await buildInvoicePdfAttachment(invoice, company)
   const customerEmail = invoice.data?.billTo?.email || invoice.customer_email || ""
   const sendTasks = []
 
