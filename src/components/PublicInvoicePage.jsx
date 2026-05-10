@@ -182,8 +182,6 @@ export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
     : mode === "cancelled"
       ? "Cancelled"
       : invoice?.status || "saved"
-  const origin = typeof window !== "undefined" ? window.location.origin : ""
-  const paymentPageUrl = invoice?.payment_page_url || (invoiceNo && origin ? `${origin}/pay/${encodeURIComponent(invoiceNo)}` : "")
   const summaryTone = mode === "success" ? "success" : mode === "cancelled" ? "warning" : "info"
   const showPaymentActions = mode === "invoice" && !isPaidInvoice
 
@@ -250,15 +248,15 @@ export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
             </div>
 
             <div className="public-actions">
-              {mode !== "pay" && invoice && (
-                <button type="button" className="action-btn" onClick={downloadInvoice}>
-                  Download Invoice
-                </button>
-              )}
-
               {showPaymentActions && (
                 <button type="button" className="action-btn" onClick={openPayment}>
                   Pay Now
+                </button>
+              )}
+
+              {mode === "invoice" && invoice && (
+                <button type="button" className="tab-btn" onClick={downloadInvoice}>
+                  Download Invoice
                 </button>
               )}
 
@@ -277,12 +275,6 @@ export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
                     Open Invoice
                   </button>
                 </>
-              )}
-
-              {showPaymentActions && paymentPageUrl && (
-                <button type="button" className="tab-btn" onClick={openInvoice}>
-                  Open Public Invoice Link
-                </button>
               )}
             </div>
 
