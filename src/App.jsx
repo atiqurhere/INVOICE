@@ -59,6 +59,7 @@ const getCurrentRoute = () => {
 		return {
 			kind: "success",
 			invoiceNo: searchParams.get("invoice_no") || searchParams.get("invoiceNo") || "",
+			sessionId: searchParams.get("session_id") || "",
 		}
 	}
 
@@ -66,6 +67,7 @@ const getCurrentRoute = () => {
 		return {
 			kind: "cancelled",
 			invoiceNo: searchParams.get("invoice_no") || searchParams.get("invoiceNo") || "",
+			sessionId: searchParams.get("session_id") || "",
 		}
 	}
 
@@ -166,7 +168,7 @@ export default function App() {
 	}, [invoiceStatus, tab])
 
 	if (routeState?.kind) {
-		return <PublicInvoicePage mode={routeState.kind} invoiceNo={routeState.invoiceNo} />
+		return <PublicInvoicePage mode={routeState.kind} invoiceNo={routeState.invoiceNo} sessionId={routeState.sessionId} />
 	}
 
 	const handleLogout = async () => {
@@ -259,11 +261,13 @@ export default function App() {
 		setTab("dashboard")
 	}
 
-	const handleSave = async (status = "saved") => {
+	const handleSave = async (status = null) => {
 		if (!supabase || !session) return
 
+		const effectiveStatus = status || invoiceData.status || (invoiceStatus === "unsaved" ? "saved" : invoiceStatus) || "saved"
+
 		// Validation when saving as final invoice
-		if (status === "saved") {
+		if (effectiveStatus !== "draft") {
 			if (!invoiceData.invoice.number.trim()) {
 				alert("Invoice number is required to save.")
 				return
@@ -290,7 +294,7 @@ export default function App() {
 			invoice_no: invoiceData.invoice.number,
 			customer: invoiceData.billTo.name || "Unknown",
 			total: total,
-			status: status,
+			status: effectiveStatus,
 			data: invoiceData
 		}
 
@@ -311,17 +315,18 @@ export default function App() {
 		if (err) {
 			alert("Error saving invoice: " + err.message)
 		} else {
-			setInvoiceStatus(status)
+			setInvoiceStatus(effectiveStatus)
 			setPaymentLinkMeta(null)
-			if (status === "saved") {
+			if (effectiveStatus === "saved") {
 				setTab("preview")
 			}
 		}
 	}
 
 	const handleEditInvoice = (docData, status, record = null) => {
-		setInvoiceData(docData)
-		setInvoiceStatus(status || "unsaved")
+		const nextStatus = status || docData?.status || "saved"
+		setInvoiceData({ ...docData, status: nextStatus })
+		setInvoiceStatus(nextStatus)
 		setPaymentLinkMeta(record ? {
 			invoiceNo: record.invoice_no,
 			status: record.status,
@@ -366,6 +371,7 @@ export default function App() {
 				checkoutUrl: result.checkoutUrl,
 				stripeCheckoutSessionId: result.stripeCheckoutSessionId,
 			})
+			setInvoiceData((prev) => ({ ...prev, status: "pending" }))
 		} catch (error) {
 			alert(error.message || "Failed to generate the payment link.")
 		} finally {
@@ -439,13 +445,11 @@ export default function App() {
 
 	const isActionDisabled = !ref.current
 	const isFinalizedInvoice = FINAL_INVOICE_STATUSES.has(invoiceStatus)
-	const paymentPageUrl = paymentLinkMeta?.paymentPageUrl || (
-		typeof window !== "undefined" && invoiceData.invoice.number && (invoiceStatus === "pending" || isFinalizedInvoice)
-			? `${window.location.origin}/pay/${encodeURIComponent(invoiceData.invoice.number)}`
-			: ""
-	)
-	const canGeneratePaymentLink = !paymentActionBusy && ["saved", "pending", "failed", "cancelled"].includes(invoiceStatus)
-	const canCopyPaymentLink = Boolean(paymentPageUrl)
+	const paymentPageUrl = paymentLinkMeta?.paymentPageUrl || ""
+	const hasGeneratedPaymentLink = Boolean(paymentLinkMeta?.paymentPageUrl)
+	const canGeneratePaymentLink = !paymentActionBusy && !hasGeneratedPaymentLink && ["saved", "pending", "failed", "cancelled"].includes(invoiceStatus)
+	const canCopyPaymentLink = hasGeneratedPaymentLink
+	const canSendPaymentLink = hasGeneratedPaymentLink
 
 	const renderExportMenu = (styleOverrides = {}) => (
 		<div className="export-dropdown-menu" style={styleOverrides}>
@@ -453,10 +457,15 @@ export default function App() {
 			<button disabled={isActionDisabled} onClick={() => { downloadJPG(ref.current, invoiceData.invoice.number); setIsExportOpen(false) }}>Download JPG</button>
 			<button disabled={isActionDisabled} onClick={() => { printInvoice(ref.current); setIsExportOpen(false) }}>Print</button>
 			<div className="export-divider" />
-			<button disabled={!canGeneratePaymentLink} onClick={() => { handleGeneratePaymentLink(); setIsExportOpen(false) }}>Generate Payment Link</button>
-			<button disabled={!canCopyPaymentLink} onClick={() => { handleCopyPaymentLink(); setIsExportOpen(false) }}>Copy Payment Link</button>
-			<button disabled={!canGeneratePaymentLink} onClick={() => { handleSendPaymentLink(); setIsExportOpen(false) }}>Send Payment Link</button>
-			{paymentPageUrl && <div className="export-link-hint">{paymentPageUrl}</div>}
+			{!hasGeneratedPaymentLink ? (
+				<button disabled={!canGeneratePaymentLink} onClick={() => { handleGeneratePaymentLink(); setIsExportOpen(false) }}>Generate Payment Link</button>
+			) : (
+				<>
+					<div className="export-link-hint">Payment link ready. Copy or send it from here.</div>
+					<button disabled={!canCopyPaymentLink} onClick={() => { handleCopyPaymentLink(); setIsExportOpen(false) }}>Copy Payment Link</button>
+					<button disabled={!canSendPaymentLink} onClick={() => { handleSendPaymentLink(); setIsExportOpen(false) }}>Send Payment Link</button>
+				</>
+			)}
 		</div>
 	)
 
@@ -568,6 +577,11 @@ export default function App() {
 								logoSrc={logoSrc}
 								onLogoChange={handleLogo}
 								data={invoiceData}
+								status={invoiceStatus}
+								onStatusChange={(nextStatus) => {
+									setInvoiceStatus(nextStatus)
+									setInvoiceData((prev) => ({ ...prev, status: nextStatus }))
+								}}
 								setData={(newData) => {
 									setInvoiceData(newData)
 									if (invoiceStatus !== "unsaved") {
@@ -583,7 +597,7 @@ export default function App() {
 										<button type="button" className="action-btn" onClick={() => handleSave("draft")} disabled={isSaving} style={{ flex: 1, minWidth: '120px' }}>
 											Save as Draft
 										</button>
-										<button type="button" className="action-btn" onClick={() => handleSave("saved")} disabled={isSaving} style={{ background: "#059669", flex: 1, minWidth: '120px' }}>
+										<button type="button" className="action-btn" onClick={() => handleSave()} disabled={isSaving} style={{ background: "#059669", flex: 1, minWidth: '120px' }}>
 											Save Invoice
 										</button>
 										<button type="button" className="danger-btn" onClick={handleCancel} style={{ flex: 1, minWidth: '120px' }}>

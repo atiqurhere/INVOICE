@@ -30,7 +30,7 @@ const formatMoney = (value) => {
   return `£${amount.toFixed(2)}`
 }
 
-export default function PublicInvoicePage({ mode, invoiceNo }) {
+export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
   const [invoicePayload, setInvoicePayload] = useState(null)
   const [loading, setLoading] = useState(true)
   const [redirecting, setRedirecting] = useState(mode === "pay")
@@ -74,13 +74,44 @@ export default function PublicInvoicePage({ mode, invoiceNo }) {
       return data
     }
 
+      const confirmSession = async () => {
+        if (!sessionId || (mode !== "success" && mode !== "cancelled")) {
+          return null
+        }
+
+        const response = await fetch("/api/payments/confirm-session", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            invoiceNo,
+            sessionId,
+            statusHint: mode === "success" ? "paid" : "cancelled",
+          }),
+        })
+
+        const data = await response.json().catch(() => ({}))
+        if (!response.ok) {
+          throw new Error(data.error || "Unable to confirm the payment session.")
+        }
+
+        return data
+      }
+
     const run = async () => {
       try {
         setLoading(true)
         setError("")
 
-        const payload = await fetchInvoice()
-        if (!active || !payload) return
+          let payload = null
+          if (mode === "success" || mode === "cancelled") {
+            payload = await confirmSession()
+          }
+
+          if (!payload) {
+            payload = await fetchInvoice()
+          }
+
+          if (!active || !payload) return
 
         setInvoicePayload(payload)
 
@@ -107,17 +138,17 @@ export default function PublicInvoicePage({ mode, invoiceNo }) {
     return () => {
       active = false
     }
-  }, [mode, invoiceNo])
+  }, [mode, invoiceNo, sessionId])
 
   const invoice = invoicePayload?.invoice
   const company = invoicePayload?.company
   const logoSrc = company?.logo_url || invoice?.data?.company?.logo_url || defaultLogo
   const copy = MODE_COPY[mode] || MODE_COPY.invoice
-  const statusLabel = mode === "success"
-    ? "Paid"
-    : mode === "cancelled"
-      ? "Cancelled"
-      : invoice?.status || "saved"
+    const statusLabel = mode === "success"
+      ? "Paid"
+      : mode === "cancelled"
+        ? "Cancelled"
+        : invoice?.status || "saved"
   const origin = typeof window !== "undefined" ? window.location.origin : ""
   const paymentPageUrl = invoice?.payment_page_url || (invoiceNo && origin ? `${origin}/pay/${encodeURIComponent(invoiceNo)}` : "")
   const summaryTone = mode === "success" ? "success" : mode === "cancelled" ? "warning" : "info"

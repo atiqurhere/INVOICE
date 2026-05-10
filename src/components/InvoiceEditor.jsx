@@ -15,7 +15,7 @@ function Field({ label, value, onChange, type = "text", textarea = false }) {
 	)
 }
 
-export default function InvoiceEditor({ logoSrc, onLogoChange, data, setData }) {
+export default function InvoiceEditor({ logoSrc, onLogoChange, data, setData, onStatusChange }) {
 	const { company, invoice, billTo, payment, items, terms, thankYou } = data
 
 	const setCompany = (patch) => setData((prev) => ({ ...prev, company: { ...prev.company, ...patch } }))
@@ -64,6 +64,8 @@ export default function InvoiceEditor({ logoSrc, onLogoChange, data, setData }) 
 		setData((prev) => ({ ...prev, terms: [...prev.terms, ""] }))
 	}
 
+	const statusValue = data.status || "saved"
+
 	return (
 		<div>
 			<section className="editor-section">
@@ -83,6 +85,23 @@ export default function InvoiceEditor({ logoSrc, onLogoChange, data, setData }) 
 				<Field label="Invoice Number" value={invoice.number} onChange={(v) => setInvoice({ number: v })} />
 				<Field label="Issue Date" type="date" value={invoice.issued} onChange={(v) => setInvoice({ issued: v })} />
 				<Field label="Delivery Date" type="date" value={invoice.delivery} onChange={(v) => setInvoice({ delivery: v })} />
+				<div className="field-wrap">
+					<label className="field-label">Status</label>
+					<select
+						className="field-input"
+						value={statusValue}
+						onChange={(e) => {
+							const nextStatus = e.target.value
+							setData((prev) => ({ ...prev, status: nextStatus }))
+								if (onStatusChange) onStatusChange(nextStatus)
+						}}
+					>
+						<option value="draft">Draft</option>
+						<option value="saved">Saved</option>
+						<option value="pending">Pending</option>
+						<option value="paid">Paid</option>
+					</select>
+				</div>
 			</section>
 
 			<section className="editor-section">
