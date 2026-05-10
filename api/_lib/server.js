@@ -116,26 +116,6 @@ function formatPdfCurrency(value) {
   return `£${Number(value || 0).toFixed(2)}`
 }
 
-function normalizeInvoiceStatusLabel(status) {
-  return {
-    pending: "Payment Pending",
-    paid: "Paid",
-    failed: "Payment Failed",
-    cancelled: "Cancelled",
-    saved: "Saved",
-    draft: "Draft",
-  }[status] || "Invoice Update"
-}
-
-function getStatusSealColor(status) {
-  return {
-    paid: { fill: [22, 101, 52], stroke: [22, 101, 52] },
-    pending: { fill: [29, 78, 216], stroke: [29, 78, 216] },
-    failed: { fill: [185, 28, 28], stroke: [185, 28, 28] },
-    cancelled: { fill: [100, 116, 139], stroke: [100, 116, 139] },
-  }[status] || { fill: [42, 127, 142], stroke: [42, 127, 142] }
-}
-
 async function loadImageDataUrl(url) {
   if (!url) return ""
   if (url.startsWith("data:")) return url
@@ -163,8 +143,6 @@ async function buildInvoicePdfBase64(invoice, company) {
   const invoiceData = invoice?.data || {}
   const items = Array.isArray(invoiceData.items) ? invoiceData.items : []
   const totals = buildInvoiceTotals(invoiceData)
-  const invoiceStatus = normalizeInvoiceStatusLabel(invoice?.status)
-  const seal = getStatusSealColor(invoice?.status)
   const logoUrl = company?.logo_url || invoiceData?.company?.logo_url || ""
   const logoDataUrl = await loadImageDataUrl(logoUrl)
 
@@ -207,19 +185,6 @@ async function buildInvoicePdfBase64(invoice, company) {
     companyLines.forEach((line, index) => {
       pdf.text(String(line), margin, 114 + (index * 12))
     })
-
-    const sealX = pageWidth - margin - 144
-    const sealY = 34
-    pdf.setFillColor(...seal.fill)
-    pdf.setDrawColor(...seal.stroke)
-    pdf.roundedRect(sealX, sealY, 144, 72, 10, 10, "FD")
-    pdf.setTextColor(255, 255, 255)
-    pdf.setFont("helvetica", "bold")
-    pdf.setFontSize(10)
-    pdf.text("STATUS SEAL", sealX + 18, sealY + 20)
-    pdf.setFontSize(20)
-    pdf.text(invoiceStatus.toUpperCase(), sealX + 18, sealY + 46)
-    pdf.setTextColor(0, 0, 0)
   }
 
   drawHeader()
@@ -235,17 +200,12 @@ async function buildInvoicePdfBase64(invoice, company) {
   pdf.text(`Invoice ${invoice?.invoice_no || ""}`, margin, y)
   y += 20
 
-  const issued = invoiceData?.invoice?.issued || ""
-  const delivery = invoiceData?.invoice?.delivery || ""
-  const statusLine = `${invoiceStatus}${invoice?.paid_at ? ` on ${new Date(invoice.paid_at).toLocaleDateString()}` : ""}`
-
   pdf.setFillColor(248, 250, 252)
   pdf.setDrawColor(226, 232, 240)
   pdf.roundedRect(margin, y, contentWidth, 84, 10, 10, "FD")
   pdf.setFontSize(10)
-  writeLine("Issued", issued, 90)
-  writeLine("Delivery", delivery, 90)
-  writeLine("Status", statusLine, 90)
+  writeLine("Issued", invoiceData?.invoice?.issued || "", 90)
+  writeLine("Delivery", invoiceData?.invoice?.delivery || "", 90)
   writeLine("Customer", invoice?.customer || invoiceData?.billTo?.name || "", 90)
   writeLine("Email", invoiceData?.billTo?.email || invoice?.customer_email || "", 90)
   writeLine("Total", formatPdfCurrency(invoice?.total || totals.total), 90)
@@ -347,7 +307,7 @@ async function buildInvoicePdfBase64(invoice, company) {
 
 async function buildInvoicePdfAttachment(invoice, company) {
   return {
-    filename: `invoice-${invoice?.invoice_no || "document"}.pdf`,
+    filename: `invoice-${String(invoice?.status || "invoice").toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "")}-${String(invoice?.invoice_no || "document").replace(/[^a-zA-Z0-9]+/g, "-").replace(/^-+|-+$/g, "")}.pdf`,
     content: await buildInvoicePdfBase64(invoice, company),
   }
 }

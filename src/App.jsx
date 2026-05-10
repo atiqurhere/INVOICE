@@ -320,11 +320,14 @@ export default function App() {
 		const { data: existing } = await supabase.from("invoices").select("id").eq("invoice_no", invoiceData.invoice.number).maybeSingle()
 		
 		let err = null
+		let savedInvoiceId = existing?.id || null
 		if (existing) {
-			const { error } = await supabase.from("invoices").update(payload).eq("id", existing.id)
+			const { data: updatedRow, error } = await supabase.from("invoices").update(payload).eq("id", existing.id).select("id").single()
+			savedInvoiceId = updatedRow?.id || existing.id
 			err = error
 		} else {
-			const { error } = await supabase.from("invoices").insert([payload])
+			const { data: insertedRow, error } = await supabase.from("invoices").insert([payload]).select("id").single()
+			savedInvoiceId = insertedRow?.id || null
 			err = error
 		}
 

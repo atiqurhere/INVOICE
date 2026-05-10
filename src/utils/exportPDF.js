@@ -13,11 +13,21 @@ const CANVAS_OPTIONS = {
 }
 
 export const downloadPDF = async (ref, filename = "invoice") => {
+  const pdfBlob = await createPDFBlob(ref)
+  const pdfUrl = URL.createObjectURL(pdfBlob)
+  const link = document.createElement("a")
+  link.download = `${filename}.pdf`
+  link.href = pdfUrl
+  link.click()
+  URL.revokeObjectURL(pdfUrl)
+}
+
+export const createPDFBlob = async (ref) => {
   const canvas = await html2canvas(ref, CANVAS_OPTIONS)
   const img = canvas.toDataURL("image/png")
   const pdf = new jsPDF()
   pdf.addImage(img, "PNG", 0, 0, 210, 297)
-  pdf.save(`${filename}.pdf`)
+  return pdf.output("blob")
 }
 
 export const downloadJPG = async (ref, filename = "invoice") => {
