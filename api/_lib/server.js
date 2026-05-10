@@ -1,4 +1,5 @@
 import crypto from "crypto"
+import { jsPDF } from "jspdf"
 import { createClient } from "@supabase/supabase-js"
 
 export function getEnv(...names) {
@@ -109,6 +110,123 @@ export function buildInvoiceTotals(invoiceData = {}) {
   const due = Number(invoiceData.totals?.due) > 0 ? Number(invoiceData.totals.due) : total
 
   return { subtotal, delivery, tax, total, due }
+}
+
+function formatPdfCurrency(value) {
+  return `£${Number(value || 0).toFixed(2)}`
+}
+
+function normalizeInvoiceStatusLabel(status) {
+  return {
+    pending: "Payment Pending",
+    paid: "Paid",
+    failed: "Payment Failed",
+    cancelled: "Cancelled",
+    saved: "Saved",
+    draft: "Draft",
+  }[status] || "Invoice Update"
+}
+
+function buildInvoicePdfBase64(invoice, company) {
+  const pdf = new jsPDF({ unit: "pt", format: "a4" })
+  const pageWidth = pdf.internal.pageSize.getWidth()
+  const pageHeight = pdf.internal.pageSize.getHeight()
+  const margin = 40
+  const contentWidth = pageWidth - margin * 2
+  let y = margin
+
+  const ensureSpace = (needed = 24) => {
+    if (y + needed > pageHeight - margin) {
+      pdf.addPage()
+      y = margin
+    }
+  }
+
+  const writeLine = (label, value, labelWidth = 120) => {
+    ensureSpace(22)
+    pdf.setFont("helvetica", "bold")
+    pdf.text(label, margin, y)
+    pdf.setFont("helvetica", "normal")
+    const wrapped = pdf.splitTextToSize(String(value ?? ""), contentWidth - labelWidth)
+    pdf.text(wrapped, margin + labelWidth, y)
+    y += Math.max(18, wrapped.length * 14)
+  }
+
+  const invoiceData = invoice?.data || {}
+  const items = Array.isArray(invoiceData.items) ? invoiceData.items : []
+  const totals = buildInvoiceTotals(invoiceData)
+  const invoiceStatus = normalizeInvoiceStatusLabel(invoice?.status)
+
+  pdf.setFont("helvetica", "bold")
+  pdf.setFontSize(20)
+  pdf.text(company?.company_name || "Invoice Generator", margin, y)
+  y += 18
+
+  pdf.setFont("helvetica", "normal")
+  pdf.setFontSize(11)
+  if (company?.address) {
+    const addressLines = pdf.splitTextToSize(company.address, contentWidth)
+    pdf.text(addressLines, margin, y)
+    y += addressLines.length * 13
+  }
+  if (company?.email) {
+    pdf.text(company.email, margin, y)
+    y += 14
+  }
+  y += 8
+
+  pdf.setDrawColor(42, 127, 142)
+  pdf.setLineWidth(1.5)
+  pdf.line(margin, y, pageWidth - margin, y)
+  y += 18
+
+  pdf.setFont("helvetica", "bold")
+  pdf.setFontSize(16)
+  pdf.text(`Invoice ${invoice?.invoice_no || ""}`, margin, y)
+  y += 22
+
+  pdf.setFontSize(11)
+  writeLine("Status", invoiceStatus)
+  writeLine("Customer", invoice?.customer || invoiceData?.billTo?.name || "")
+  writeLine("Email", invoiceData?.billTo?.email || invoice?.customer_email || "")
+  writeLine("Total", formatPdfCurrency(invoice?.total || totals.total))
+  y += 8
+
+  pdf.setFont("helvetica", "bold")
+  pdf.setFontSize(13)
+  pdf.text("Items", margin, y)
+  y += 14
+
+  pdf.setFontSize(10)
+  items.forEach((item, index) => {
+    const description = String(item?.description || `Item ${index + 1}`)
+    const quantity = Number(item?.qty) || 0
+    const price = Number(item?.price) || 0
+    const lineTotal = quantity * price
+    const rowText = `${index + 1}. ${description}  x${quantity}  ${formatPdfCurrency(price)}  ${formatPdfCurrency(lineTotal)}`
+    const wrapped = pdf.splitTextToSize(rowText, contentWidth)
+    ensureSpace(wrapped.length * 14 + 4)
+    pdf.text(wrapped, margin, y)
+    y += wrapped.length * 14 + 4
+  })
+
+  y += 8
+  pdf.setFont("helvetica", "bold")
+  pdf.setFontSize(12)
+  writeLine("Subtotal", formatPdfCurrency(totals.subtotal))
+  writeLine("Delivery", formatPdfCurrency(totals.delivery))
+  writeLine("Tax", formatPdfCurrency(totals.tax))
+  writeLine("Amount Due", formatPdfCurrency(totals.due))
+
+  const arrayBuffer = pdf.output("arraybuffer")
+  return Buffer.from(arrayBuffer).toString("base64")
+}
+
+function buildInvoicePdfAttachment(invoice, company) {
+  return {
+    filename: `invoice-${invoice?.invoice_no || "document"}.pdf`,
+    content: buildInvoicePdfBase64(invoice, company),
+  }
 }
 
 export function buildStripeLineItems(invoiceData = {}) {
@@ -306,7 +424,7 @@ export function buildEmailHtml({ title, invoice, company, statusLabel, ctaLabel,
   `
 }
 
-export async function sendResendEmail({ to, subject, html }) {
+export async function sendResendEmail({ to, subject, html, attachments = [] }) {
   const apiKey = getResendApiKey()
   const fromEmail = getFromEmail()
 
@@ -329,6 +447,7 @@ export async function sendResendEmail({ to, subject, html }) {
       to: Array.isArray(to) ? to : [to],
       subject,
       html,
+      ...(attachments.length > 0 ? { attachments } : {}),
     }),
   })
 
@@ -340,50 +459,139 @@ export async function sendResendEmail({ to, subject, html }) {
   return payload
 }
 
-export async function sendInvoiceEmailNotifications({ invoice, company, baseUrl, paymentPageUrl, status, adminEmail }) {
-  const statusLabel = {
-    pending: "Payment Link Ready",
-    paid: "Payment Received",
-    failed: "Payment Failed",
-    cancelled: "Payment Cancelled",
-  }[status] || "Invoice Update"
+function buildInvoiceNotificationEmail({ invoice, company, baseUrl, paymentPageUrl, status, recipientRole }) {
+  const invoiceLink = `${baseUrl}/invoice/${encodeURIComponent(invoice.invoice_no)}`
+  const checkoutLink = paymentPageUrl || `${baseUrl}/pay/${encodeURIComponent(invoice.invoice_no)}`
 
-  const actionLabel = status === "paid" ? "View Invoice" : "Open Payment Link"
-  const ctaUrl = status === "paid" ? `${baseUrl}/invoice/${encodeURIComponent(invoice.invoice_no)}` : paymentPageUrl
-  const note = status === "paid"
-    ? "Your payment has been confirmed. The invoice status has been updated for both you and the admin team."
-    : status === "failed"
-      ? "The payment attempt was not completed. You can try again using the payment link below."
-      : status === "cancelled"
-        ? "The payment session was cancelled or expired. Use the link below to reopen the invoice payment page."
-        : "Your payment link has been generated and is ready to share."
+  const templates = {
+    pending: {
+      customer: {
+        statusLabel: "Payment Link Ready",
+        title: `Your payment link is ready for invoice ${invoice.invoice_no}`,
+        ctaLabel: "Pay Invoice",
+        ctaUrl: checkoutLink,
+        note: "Use the secure checkout link below to complete your payment.",
+        subject: `Payment link ready: Invoice ${invoice.invoice_no}`,
+      },
+      admin: {
+        statusLabel: "Payment Link Generated",
+        title: `Payment link generated for invoice ${invoice.invoice_no}`,
+        ctaLabel: "Review Payment Link",
+        ctaUrl: checkoutLink,
+        note: "The Stripe checkout session is ready and the customer can now pay online.",
+        subject: `Payment link generated - Invoice ${invoice.invoice_no}`,
+      },
+    },
+    paid: {
+      customer: {
+        statusLabel: "Payment Received",
+        title: `Payment received for invoice ${invoice.invoice_no}`,
+        ctaLabel: "View Invoice",
+        ctaUrl: invoiceLink,
+        note: "Thank you. Your payment has been confirmed and the invoice status has been updated.",
+        subject: `Payment received: Invoice ${invoice.invoice_no}`,
+      },
+      admin: {
+        statusLabel: "Payment Confirmed",
+        title: `Invoice ${invoice.invoice_no} marked as paid`,
+        ctaLabel: "Open Invoice",
+        ctaUrl: invoiceLink,
+        note: "The payment was confirmed and the customer has been notified.",
+        subject: `Invoice paid - ${invoice.invoice_no}`,
+      },
+    },
+    cancelled: {
+      customer: {
+        statusLabel: "Payment Cancelled",
+        title: `Payment session cancelled for invoice ${invoice.invoice_no}`,
+        ctaLabel: "Try Payment Again",
+        ctaUrl: checkoutLink,
+        note: "The checkout session was cancelled or expired. You can reopen the payment page using the button below.",
+        subject: `Payment cancelled: Invoice ${invoice.invoice_no}`,
+      },
+      admin: {
+        statusLabel: "Payment Cancelled",
+        title: `Payment session cancelled for invoice ${invoice.invoice_no}`,
+        ctaLabel: "Review Invoice",
+        ctaUrl: invoiceLink,
+        note: "The payment session was cancelled or expired. The customer can try again from the public invoice page.",
+        subject: `Payment cancelled - Invoice ${invoice.invoice_no}`,
+      },
+    },
+    failed: {
+      customer: {
+        statusLabel: "Payment Failed",
+        title: `Payment failed for invoice ${invoice.invoice_no}`,
+        ctaLabel: "Try Again",
+        ctaUrl: checkoutLink,
+        note: "The payment attempt was not completed. You can try again using the payment link below.",
+        subject: `Payment failed: Invoice ${invoice.invoice_no}`,
+      },
+      admin: {
+        statusLabel: "Payment Failed",
+        title: `Payment failed for invoice ${invoice.invoice_no}`,
+        ctaLabel: "Review Invoice",
+        ctaUrl: invoiceLink,
+        note: "The payment attempt did not complete. The customer can try again using the public payment link.",
+        subject: `Payment failed - Invoice ${invoice.invoice_no}`,
+      },
+    },
+  }
 
-  const html = buildEmailHtml({
+  const fallback = {
+    statusLabel: "Invoice Update",
     title: `Invoice ${invoice.invoice_no}`,
-    invoice,
-    company,
-    statusLabel,
-    ctaLabel: actionLabel,
-    ctaUrl,
-    note,
-  })
+    ctaLabel: "Open Invoice",
+    ctaUrl: invoiceLink,
+    note: "Here is the latest invoice update.",
+    subject: `Invoice update - ${invoice.invoice_no}`,
+  }
 
+  return templates[status]?.[recipientRole] || fallback
+}
+
+export async function sendInvoiceEmailNotifications({ invoice, company, baseUrl, paymentPageUrl, status, adminEmail }) {
+  const attachment = buildInvoicePdfAttachment(invoice, company)
   const customerEmail = invoice.data?.billTo?.email || invoice.customer_email || ""
   const sendTasks = []
 
   if (customerEmail) {
+    const customerTemplate = buildInvoiceNotificationEmail({ invoice, company, baseUrl, paymentPageUrl, status, recipientRole: "customer" })
+    const customerHtml = buildEmailHtml({
+      title: customerTemplate.title,
+      invoice,
+      company,
+      statusLabel: customerTemplate.statusLabel,
+      ctaLabel: customerTemplate.ctaLabel,
+      ctaUrl: customerTemplate.ctaUrl,
+      note: customerTemplate.note,
+    })
+
     sendTasks.push(sendResendEmail({
       to: customerEmail,
-      subject: `${statusLabel}: Invoice ${invoice.invoice_no}`,
-      html,
+      subject: customerTemplate.subject,
+      html: customerHtml,
+      attachments: [attachment],
     }))
   }
 
   if (adminEmail) {
+    const adminTemplate = buildInvoiceNotificationEmail({ invoice, company, baseUrl, paymentPageUrl, status, recipientRole: "admin" })
+    const adminHtml = buildEmailHtml({
+      title: adminTemplate.title,
+      invoice,
+      company,
+      statusLabel: adminTemplate.statusLabel,
+      ctaLabel: adminTemplate.ctaLabel,
+      ctaUrl: adminTemplate.ctaUrl,
+      note: adminTemplate.note,
+    })
+
     sendTasks.push(sendResendEmail({
       to: adminEmail,
-      subject: `${statusLabel} - Invoice ${invoice.invoice_no}`,
-      html,
+      subject: adminTemplate.subject,
+      html: adminHtml,
+      attachments: [attachment],
     }))
   }
 

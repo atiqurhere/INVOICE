@@ -143,15 +143,23 @@ export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
   const invoice = invoicePayload?.invoice
   const company = invoicePayload?.company
   const logoSrc = company?.logo_url || invoice?.data?.company?.logo_url || defaultLogo
-  const copy = MODE_COPY[mode] || MODE_COPY.invoice
-    const statusLabel = mode === "success"
-      ? "Paid"
-      : mode === "cancelled"
-        ? "Cancelled"
-        : invoice?.status || "saved"
+  const isPaidInvoice = mode === "invoice" && invoice?.status === "paid"
+  const copy = isPaidInvoice
+    ? {
+        eyebrow: "Payment Confirmed",
+        title: "This invoice has already been paid",
+        copy: "A payment has already been confirmed for this invoice. You can review the details below.",
+      }
+    : MODE_COPY[mode] || MODE_COPY.invoice
+  const statusLabel = mode === "success"
+    ? "Paid"
+    : mode === "cancelled"
+      ? "Cancelled"
+      : invoice?.status || "saved"
   const origin = typeof window !== "undefined" ? window.location.origin : ""
   const paymentPageUrl = invoice?.payment_page_url || (invoiceNo && origin ? `${origin}/pay/${encodeURIComponent(invoiceNo)}` : "")
   const summaryTone = mode === "success" ? "success" : mode === "cancelled" ? "warning" : "info"
+  const showPaymentActions = mode === "invoice" && !isPaidInvoice
 
   const openInvoice = () => {
     if (invoiceNo) {
@@ -210,7 +218,7 @@ export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
             </div>
 
             <div className="public-actions">
-              {mode === "invoice" && (
+              {showPaymentActions && (
                 <button type="button" className="action-btn" onClick={openPayment}>
                   Pay Now
                 </button>
@@ -233,7 +241,7 @@ export default function PublicInvoicePage({ mode, invoiceNo, sessionId }) {
                 </>
               )}
 
-              {mode === "invoice" && paymentPageUrl && (
+              {showPaymentActions && paymentPageUrl && (
                 <button type="button" className="tab-btn" onClick={openInvoice}>
                   Open Public Invoice Link
                 </button>

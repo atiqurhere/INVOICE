@@ -1312,6 +1312,10 @@ textarea.field-input {
 .public-summary-card {
   border-radius: 18px;
   padding: 18px 20px;
+  min-height: 124px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
 }
 
 .public-summary-card span {
@@ -1325,8 +1329,11 @@ textarea.field-input {
 }
 
 .public-summary-card strong {
-  font-size: 24px;
+  font-size: clamp(20px, 3vw, 28px);
   color: #0f172a;
+  line-height: 1.15;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .public-actions {
@@ -1337,10 +1344,136 @@ textarea.field-input {
   margin: 18px 0 22px;
 }
 
+.public-actions .action-btn,
+.public-actions .tab-btn {
+  min-width: 220px;
+  min-height: 48px;
+  padding: 12px 20px;
+  font-size: 15px;
+}
+
+.public-actions .tab-btn {
+  background: #ffffff;
+  color: #0f172a;
+  border: 1px solid rgba(15, 23, 42, 0.12);
+  box-shadow: 0 12px 24px rgba(15, 23, 42, 0.06);
+}
+
+.public-actions .tab-btn:hover {
+  background: #f8fafc;
+  color: #0f172a;
+}
+
+.public-actions .action-btn {
+  box-shadow: 0 12px 24px rgba(42, 127, 142, 0.18);
+}
+
+.public-actions .action-btn:hover {
+  background: #236c7a;
+}
+
 .public-preview-card {
   border-radius: 24px;
   overflow: hidden;
   padding: 12px;
+}
+
+@media (max-width: 900px) {
+  .public-page-shell {
+    padding: 24px 14px 36px;
+  }
+
+  .public-page-hero {
+    padding: 20px 14px;
+  }
+
+  .public-page-card {
+    padding: 22px;
+  }
+
+  .public-summary-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .public-summary-card:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .public-summary-card {
+    min-height: 112px;
+    padding: 16px 18px;
+  }
+
+  .public-preview-card {
+    padding: 10px;
+  }
+}
+
+@media (max-width: 640px) {
+  .public-page-shell {
+    padding: 18px 12px 28px;
+  }
+
+  .public-page-hero {
+    padding: 14px 6px 18px;
+  }
+
+  .public-page-logo {
+    height: 44px;
+    max-width: 150px;
+  }
+
+  .public-page-hero h1 {
+    font-size: clamp(26px, 8vw, 34px);
+  }
+
+  .public-page-hero p {
+    font-size: 15px;
+  }
+
+  .public-page-card {
+    padding: 18px 16px;
+    border-radius: 18px;
+  }
+
+  .public-summary-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+  }
+
+  .public-summary-card:last-child {
+    grid-column: auto;
+  }
+
+  .public-summary-card {
+    min-height: auto;
+    padding: 14px 16px;
+    border-radius: 16px;
+  }
+
+  .public-summary-card span {
+    font-size: 10px;
+    margin-bottom: 6px;
+  }
+
+  .public-summary-card strong {
+    font-size: clamp(18px, 6vw, 24px);
+  }
+
+  .public-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .public-actions .action-btn,
+  .public-actions .tab-btn {
+    width: 100%;
+  }
+
+  .public-preview-card {
+    padding: 8px;
+    border-radius: 18px;
+  }
 }
 
 @keyframes public-spin {
